@@ -2,6 +2,7 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 
 const setup = async () => {
+  console.log("!! HELLO WORLD !!");
   const repoToken = core.getInput("repo-token");
   const rootEmail = core.getInput("root-email");
   const terraformCloudToken = core.getInput("terraform-cloud-token");

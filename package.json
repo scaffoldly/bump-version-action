@@ -10,7 +10,7 @@
     "build": "ncc build index.js --license licenses.txt",
     "prepare": "yarn build",
     "version": "git add -A dist",
-    "postversion": "git push origin HEAD:main && git push --tags"
+    "postversion": "git push origin HEAD:main && git push --follow-tags"
   },
   "dependencies": {
     "@actions/core": "^1.2.6",
