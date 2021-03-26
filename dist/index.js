@@ -38,60 +38,63 @@ const getOrgAndRepo = async () => {
 const terraformPost = async (url, data) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  const response = await axios.default.post(url, data, {
-    headers: {
-      Authorization: `Bearer ${terraformCloudToken}`,
-      "Content-Type": "application/vnd.api+json",
-    },
-  });
+  try {
+    const { status, data } = await axios.default.post(url, data, {
+      headers: {
+        Authorization: `Bearer ${terraformCloudToken}`,
+        "Content-Type": "application/vnd.api+json",
+      },
+    });
 
-  return response;
+    return { status, data };
+  } catch (e) {
+    if (!e.response || e.response.status !== "422" || !e.response.data) {
+      console.error("Error posting to Terraform Cloud", e.message);
+      throw e;
+    }
+
+    const { status, data } = e.response;
+
+    return { status, data };
+  }
 };
 
 const createTerraformOrganization = async (organization) => {
   const rootEmail = core.getInput("root-email");
 
-  try {
-    const { status, data } = await terraformPost(
-      "https://app.terraform.io/api/v2/organizations",
-      {
-        data: {
-          type: "organizations",
-          attributes: {
-            name: organization,
-            email: rootEmail,
-          },
+  const { status, data } = await terraformPost(
+    "https://app.terraform.io/api/v2/organizations",
+    {
+      data: {
+        type: "organizations",
+        attributes: {
+          name: organization,
+          email: rootEmail,
         },
-      }
-    );
-    console.log(`Status Code: ${status}: Response: ${JSON.stringify(data)}`);
-  } catch (e) {
-    // TODO: Check message
-    console.warn("Error creating organization: ", e);
-  }
+      },
+    }
+  );
+
+  console.log(`[${status}] Create Org Response: ${JSON.stringify(data)}`);
 };
 
 const createTerraformWorkspace = async (organization, workspace) => {
   const rootEmail = core.getInput("root-email");
 
-  try {
-    const { status, data } = await terraformPost(
-      `https://app.terraform.io/api/v2/organizations/${organization}/workspaces`,
-      {
-        data: {
-          type: "workspaces",
-          attributes: {
-            name: workspace,
-            operations: false,
-          },
+  const { status, data } = await terraformPost(
+    `https://app.terraform.io/api/v2/organizations/${organization}/workspaces`,
+    {
+      data: {
+        type: "workspaces",
+        attributes: {
+          name: workspace,
+          operations: false,
         },
-      }
-    );
-    console.log(`Status Code: ${status}: Response: ${JSON.stringify(data)}`);
-  } catch (e) {
-    // TODO: Check message
-    console.warn("Error creating workspace: ", e);
-  }
+      },
+    }
+  );
+
+  console.log(`[${status}] Create Workspace Response: ${JSON.stringify(data)}`);
 };
 
 const setup = async () => {
