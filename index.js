@@ -9,10 +9,16 @@ const getOrganization = async () => {
     throw new Error("Unable to find remote with name 'origin'");
   }
 
-  const url = origin.refs.push;
-  console.log("!!!! url", url);
+  const { pathname } = new URL(origin.refs.push);
+  if (!pathname) {
+    throw new Error(`Unable to extract pathname from ${origin.refs.push}`);
+  }
 
-  return "todo";
+  const organization = pathname.split("/")[0];
+  if (!organization) {
+    throw new Error(`Unable to extract organization from ${origin.refs.push}`);
+  }
+  return organization;
 };
 
 const setup = async () => {

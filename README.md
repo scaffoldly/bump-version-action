@@ -26,6 +26,7 @@ The GitHub/Terraform Cloud Organization name
 ## Example usage
 
 ```yaml
+- uses: actions/checkout@v2
 - uses: scaffoldly/setup-bootstrap@v1
   with:
     repo-token: ${{ secrets.GITHUB_TOKEN }}
