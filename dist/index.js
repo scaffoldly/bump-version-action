@@ -35,11 +35,11 @@ const getOrgAndRepo = async () => {
   return { organization, repo };
 };
 
-const terraformPost = async (url, data) => {
+const terraformPost = async (url, payload) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
   try {
-    const { status, data } = await axios.default.post(url, data, {
+    const { status, data } = await axios.default.post(url, payload, {
       headers: {
         Authorization: `Bearer ${terraformCloudToken}`,
         "Content-Type": "application/vnd.api+json",
@@ -79,8 +79,6 @@ const createTerraformOrganization = async (organization) => {
 };
 
 const createTerraformWorkspace = async (organization, workspace) => {
-  const rootEmail = core.getInput("root-email");
-
   const { status, data } = await terraformPost(
     `https://app.terraform.io/api/v2/organizations/${organization}/workspaces`,
     {
