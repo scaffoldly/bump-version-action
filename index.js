@@ -41,7 +41,7 @@ const terraformPost = async (url, payload) => {
 
     return { status, data };
   } catch (e) {
-    if (!e.response || e.response.status !== "422" || !e.response.data) {
+    if (!e.response || e.response.status !== 422 || !e.response.data) {
       console.error("Error posting to Terraform Cloud", e.message);
       throw e;
     }
