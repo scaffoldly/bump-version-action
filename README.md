@@ -5,6 +5,10 @@ initialized prior to running a `terraform plan`.
 
 ## Inputs
 
+### `repo-token`
+
+**Required** [The GitHub token for this repo](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)
+
 ### `root-email`
 
 **Required** [Root Email for your project](https://docs.scaffold.ly/getting-started/prerequisites#root-email)
@@ -24,6 +28,7 @@ The GitHub/Terraform Cloud Organization name
 ```yaml
 - uses: scaffoldly/setup-bootstrap@v1
   with:
+    repo-token: ${{ secrets.GITHUB_TOKEN }}
     root-email: ${{ secrets.BOOTSTRAP_ROOT_EMAIL }}
-  terraform-cloud-token: ${{ secrets.BOOTSTRAP_TERRAFORM_TOKEN }}
+    terraform-cloud-token: ${{ secrets.BOOTSTRAP_TERRAFORM_TOKEN }}
 ```
