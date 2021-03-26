@@ -2,10 +2,11 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 
 const setup = async () => {
+  const repoToken = core.getInput("repo-token");
   const rootEmail = core.getInput("root-email");
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  const { orgs: orgsApi } = github.getOctokit();
+  const { orgs: orgsApi } = github.getOctokit(repoToken);
   const { id: orgId } = await orgsApi.get();
 
   console.log("!!!! orgId", orgId);
