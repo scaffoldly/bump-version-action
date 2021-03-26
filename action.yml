@@ -1,0 +1,15 @@
+name: "Setup Bootstrap"
+description: "GitHub Action for scaffoldly/bootstrap"
+inputs:
+  root-email:
+    description: "Root Email for your project (https://docs.scaffold.ly/getting-started/prerequisites#root-email)"
+    required: true
+  terraform-cloud-token:
+    description: "Access Token to Terraform Cloud (https://docs.scaffold.ly/getting-started/prerequisites#terraform-cloud)"
+    required: true
+outputs:
+  organization:
+    description: "The GitHub/Terraform Cloud Organization"
+runs:
+  using: "node12"
+  main: "dist/index.js"
