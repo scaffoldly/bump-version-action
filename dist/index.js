@@ -9,6 +9,7 @@ const core = __nccwpck_require__(186);
 const github = __nccwpck_require__(438);
 
 const setup = async () => {
+  console.log("!! HELLO WORLD !!");
   const repoToken = core.getInput("repo-token");
   const rootEmail = core.getInput("root-email");
   const terraformCloudToken = core.getInput("terraform-cloud-token");
