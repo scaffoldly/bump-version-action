@@ -9,10 +9,11 @@ const core = __nccwpck_require__(186);
 const github = __nccwpck_require__(438);
 
 const setup = async () => {
+  const repoToken = core.getInput("repo-token");
   const rootEmail = core.getInput("root-email");
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  const { orgs: orgsApi } = github.getOctokit();
+  const { orgs: orgsApi } = github.getOctokit(repoToken);
   const { id: orgId } = await orgsApi.get();
 
   console.log("!!!! orgId", orgId);
