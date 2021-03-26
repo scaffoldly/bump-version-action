@@ -1,6 +1,6 @@
 {
   "name": "setup-bootstrap",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "GitHub Action for scaffoldly/bootstrap",
   "main": "index.js",
   "repository": "git@github.com:scaffoldly/setup-bootstrap.git",

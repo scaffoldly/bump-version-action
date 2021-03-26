@@ -48,7 +48,19 @@ const terraformPost = async (url, payload) => {
 
     return { status, data };
   } catch (e) {
-    if (!e.response || e.response.status !== 422 || !e.response.data) {
+    // ignore this type of response so our org/workspace creation is idempotent
+    // {"errors":[{"status":"422","title":"invalid attribute","detail":"Name has already been taken","source":{"pointer":"/data/attributes/name"}}]}
+    if (
+      !e.response ||
+      e.response.status !== 422 ||
+      !e.response.data ||
+      !e.response.data.errors ||
+      e.response.data.errors.length !== 1 ||
+      !e.response.data.errors[0] ||
+      !e.response.data.errors[0].source ||
+      !e.response.data.errors[0].source.pointer ||
+      e.response.data.errors[0].source.pointer !== "/data/attributes/name"
+    ) {
       console.error("Error posting to Terraform Cloud", e.message);
       throw e;
     }
