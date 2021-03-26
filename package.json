@@ -1,13 +1,16 @@
 {
   "name": "setup-bootstrap",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "GitHub Action for scaffoldly/bootstrap",
   "main": "index.js",
   "repository": "git@github.com:scaffoldly/setup-bootstrap.git",
   "author": "Christian Nuss",
-  "license": "GPLV3",
+  "license": "GPL-3.0-or-later",
   "scripts": {
-    "prepare": "ncc build index.js --license licenses.txt"
+    "build": "ncc build index.js --license licenses.txt",
+    "prepare": "yarn build",
+    "version": "git add -A dist",
+    "postversion": "git push origin HEAD:master && git push --tags"
   },
   "dependencies": {
     "@actions/core": "^1.2.6",
