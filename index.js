@@ -68,7 +68,7 @@ const createTerraformWorkspace = async (organization, workspace) => {
   const rootEmail = core.getInput("root-email");
 
   try {
-    const { status, data } = terraformPost(
+    const { status, data } = await terraformPost(
       `https://app.terraform.io/api/v2/organizations/${organization}/workspaces`,
       {
         data: {
