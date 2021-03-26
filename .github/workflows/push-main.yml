@@ -1,0 +1,19 @@
+name: Push to Main
+on:
+  push:
+    branches:
+      - main
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2-beta
+        with:
+          node-version: "12"
+      - run: yarn
+      - uses: "scaffoldly/github-action-bump-version-npm@master"
+        with:
+          tag-prefix: ""
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
