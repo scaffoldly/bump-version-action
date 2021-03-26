@@ -2,7 +2,7 @@ name: "Setup Bootstrap"
 description: "GitHub Action for scaffoldly/bootstrap"
 inputs:
   repo-token:
-    description: "The GitHub token for this repo. Use ${{ secrets.GITHUB_TOKEN }}"
+    description: "The GitHub token for this repo. (https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)"
     required: true
   root-email:
     description: "Root Email for your project (https://docs.scaffold.ly/getting-started/prerequisites#root-email)"
