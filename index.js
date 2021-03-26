@@ -33,7 +33,7 @@ const terraformPost = async (url, data) => {
 
   const response = await axios.default.post(url, data, {
     headers: {
-      Authorization: terraformCloudToken,
+      Authorization: `Bearer ${terraformCloudToken}`,
       "Content-Type": "application/vnd.api+json",
     },
   });
