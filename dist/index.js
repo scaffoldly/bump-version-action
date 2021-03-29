@@ -114,12 +114,15 @@ const terraformInit = (organization) => {
   const command = `terraform init -backend-config="hostname=app.terraform.io" -backend-config="organization=${organization}" -backend-config="token=${terraformCloudToken}"`;
 
   return new Promise((resolve, reject) => {
-    exec(command, (error, stdout) => {
+    const process = exec(command, (error, stdout) => {
       if (error) {
         reject(new Error(error));
         return;
       }
-      resolve(stdout);
+      resolve();
+    });
+    process.stdout.on("data", (data) => {
+      console.log(data);
     });
   });
 };
@@ -130,9 +133,7 @@ const run = async () => {
 
   await createTerraformOrganization(organization);
   await createTerraformWorkspace(organization, repo);
-  const stdout = await terraformInit(organization);
-
-  console.log("!!! stdout", stdout);
+  await terraformInit(organization);
 };
 
 (async () => {
