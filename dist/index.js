@@ -9,7 +9,7 @@ const core = __nccwpck_require__(2186);
 const github = __nccwpck_require__(5438);
 const simpleGit = __nccwpck_require__(1477);
 const axios = __nccwpck_require__(6545);
-const { exec } = __nccwpck_require__(3129);
+const proc = __nccwpck_require__(3129);
 
 const getOrgAndRepo = async () => {
   const remotes = await simpleGit.default().getRemotes(true);
@@ -108,23 +108,36 @@ const createTerraformWorkspace = async (organization, workspace) => {
   console.log(`[${status}] Create Workspace Response: ${JSON.stringify(data)}`);
 };
 
-const terraformInit = (organization) => {
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-
-  const command = `terraform init -backend-config="hostname=app.terraform.io" -backend-config="organization=${organization}" -backend-config="token=${terraformCloudToken}"`;
-
+const exec = (command) => {
   return new Promise((resolve, reject) => {
-    const process = exec(command, (error, stdout) => {
+    const process = proc.exec(command, (error, stdout) => {
       if (error) {
         reject(new Error(error));
         return;
       }
-      resolve();
+      resolve(stdout);
     });
     process.stdout.on("data", (data) => {
       console.log(data);
     });
+    process.stderr.on("data", (data) => {
+      console.log(data);
+    });
   });
+};
+
+const terraformInit = async (organization) => {
+  const terraformCloudToken = core.getInput("terraform-cloud-token");
+
+  const command = `terraform init -backend-config="hostname=app.terraform.io" -backend-config="organization=${organization}" -backend-config="token=${terraformCloudToken}"`;
+
+  await exec(command);
+};
+
+const terraformPlan = async () => {
+  const command = `terraform plan -no-color`;
+  const output = await exec(command);
+  return output;
 };
 
 const run = async () => {
@@ -134,6 +147,25 @@ const run = async () => {
   await createTerraformOrganization(organization);
   await createTerraformWorkspace(organization, repo);
   await terraformInit(organization);
+
+  const action = core.getInput("action");
+
+  switch (action) {
+    case "plan": {
+      const plan = await terraformPlan();
+      console.log("!!!!! OUTPUT IS", plan);
+      // TODO lint plan, creates, changes, deletes
+      // TODO encrypt
+      // TODO add pr comment
+      // TODO create release
+      // TODO upload planfile
+      // TODO upload plan output
+      break;
+    }
+
+    default:
+      console.error("Unknown action", action);
+  }
 };
 
 (async () => {
