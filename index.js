@@ -103,18 +103,23 @@ const createTerraformWorkspace = async (organization, workspace) => {
 
 const exec = (command) => {
   return new Promise((resolve, reject) => {
+    let log = "";
     const process = proc.exec(command, (error, stdout) => {
       if (error) {
         reject(new Error(error));
         return;
       }
-      resolve(stdout);
     });
     process.stdout.on("data", (data) => {
+      log = `${log}${data}`;
       console.log(data);
     });
     process.stderr.on("data", (data) => {
+      log = `${log}${data}`;
       console.log(data);
+    });
+    process.stdout.on("close", () => {
+      resolve(log);
     });
   });
 };
@@ -128,7 +133,7 @@ const terraformInit = async (organization) => {
 };
 
 const terraformPlan = async () => {
-  const command = `terraform plan -no-color`;
+  const command = `terraform plan -no-color -out planfile`;
   const output = await exec(command);
   return output;
 };
