@@ -116,18 +116,16 @@ const exec = (command) => {
         reject(new Error(error));
         return;
       }
+      resolve(stdout);
     });
-    process.stdout.on("data", (data) => {
-      log = `${log}${data}`;
-      console.log(data);
-    });
-    process.stderr.on("data", (data) => {
-      log = `${log}${data}`;
-      console.log(data);
-    });
-    process.stdout.on("close", () => {
-      resolve(log);
-    });
+    // process.stdout.on("data", (data) => {
+    //   log = `${log}${data}`;
+    //   console.log(data);
+    // });
+    // process.stderr.on("data", (data) => {
+    //   log = `${log}${data}`;
+    //   console.log(data);
+    // });
   });
 };
 
@@ -139,10 +137,64 @@ const terraformInit = async (organization) => {
   await exec(command);
 };
 
+const parseOutput = (output) => {
+  return output.split("\n").reduce(
+    (acc, line) => {
+      if (line.startsWith("  #")) {
+        acc.isReading = false;
+        acc.isAdding = false;
+        acc.isModifying = false;
+        acc.isDestroying = false;
+        return acc;
+      }
+
+      if (acc.isAdding) {
+        acc.adding.push(line);
+        return acc;
+      }
+
+      if (acc.isModifying) {
+        acc.modifying.push(line);
+        return acc;
+      }
+
+      if (acc.isDestroying) {
+        acc.destroying.push(line);
+        return acc;
+      }
+
+      if (line.startsWith("  + ")) {
+        acc.isAdding = true;
+        acc.adding.push(line);
+        return acc;
+      }
+
+      if (line.startsWith(" <= ")) {
+        acc.isReading = true;
+        acc.reading.push(line);
+        return acc;
+      }
+      return acc;
+    },
+    {
+      reading: [],
+      isReading: false,
+      adding: [],
+      isAdding: false,
+      destroying: [],
+      isDestroying: false,
+      modifying: [],
+      isModifying: false,
+    }
+  );
+};
+
 const terraformPlan = async () => {
   const command = `terraform plan -no-color -out planfile`;
   const output = await exec(command);
-  return output;
+  const { reading, adding, destroying, modifying } = parseOutput(output);
+
+  return { reading, adding, destroying, modifying };
 };
 
 const run = async () => {
