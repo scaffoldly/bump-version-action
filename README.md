@@ -1,9 +1,13 @@
-# setup-bootstrap action
+# bootstrap-action action
 
-This action fetches the GitHub organization and ensures Terraform Cloud is
-initialized prior to running a `terraform plan`.
+This action runs all the steps required to run a `terraform plan` or
+`terraform apply` on a Scaffoldly Bootstrap project.
 
 ## Inputs
+
+### `action`
+
+**Required** The action to run: 'plan' or 'apply'
 
 ### `repo-token`
 
@@ -25,10 +29,14 @@ The GitHub/Terraform Cloud Organization name
 
 ## Example usage
 
+Run a `terraform plan`:
+
 ```yaml
 - uses: actions/checkout@v2
+- uses: hashicorp/setup-terraform@v1
 - uses: scaffoldly/setup-bootstrap@v1
   with:
+    action: plan
     repo-token: ${{ secrets.GITHUB_TOKEN }}
     root-email: ${{ secrets.BOOTSTRAP_ROOT_EMAIL }}
     terraform-cloud-token: ${{ secrets.BOOTSTRAP_TERRAFORM_TOKEN }}
