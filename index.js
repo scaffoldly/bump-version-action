@@ -2,6 +2,7 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const simpleGit = require("simple-git");
 const axios = require("axios");
+const { exec } = require("child_process");
 
 const getOrgAndRepo = async () => {
   const remotes = await simpleGit.default().getRemotes(true);
@@ -100,21 +101,34 @@ const createTerraformWorkspace = async (organization, workspace) => {
   console.log(`[${status}] Create Workspace Response: ${JSON.stringify(data)}`);
 };
 
-const setup = async () => {
-  const repoToken = core.getInput("repo-token");
+const terraformInit = (organization) => {
+  const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  // const { orgs: orgsApi } = github.getOctokit(repoToken);
+  const command = `terraform init -backend-config="hostname=app.terraform.io" -backend-config="organization=${organization}" -backend-config="token=${terraformCloudToken}"`;
 
+  return new Promise((resolve, reject) => {
+    exec(command, (error, stdout) => {
+      if (error) {
+        reject(new Error(error));
+        return;
+      }
+      resolve();
+    });
+  });
+};
+
+const run = async () => {
   const { organization, repo } = await getOrgAndRepo();
   core.setOutput("organization", organization);
 
   await createTerraformOrganization(organization);
   await createTerraformWorkspace(organization, repo);
+  await terraformInit(organization);
 };
 
 (async () => {
   try {
-    await setup();
+    await run();
   } catch (e) {
     core.setFailed(e.message);
   }
