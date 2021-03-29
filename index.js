@@ -112,7 +112,7 @@ const terraformInit = (organization) => {
         reject(new Error(error));
         return;
       }
-      resolve();
+      resolve(stdout);
     });
   });
 };
@@ -123,7 +123,9 @@ const run = async () => {
 
   await createTerraformOrganization(organization);
   await createTerraformWorkspace(organization, repo);
-  await terraformInit(organization);
+  const stdout = await terraformInit(organization);
+
+  console.log("!!! stdout", stdout);
 };
 
 (async () => {
