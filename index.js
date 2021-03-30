@@ -6,8 +6,6 @@ const proc = require("child_process");
 const openpgp = require("openpgp");
 const fs = require("fs");
 
-const pgp = new openpgp();
-
 const getOrgAndRepo = async () => {
   const remotes = await simpleGit.default().getRemotes(true);
   const origin = remotes.find((remote) => remote.name === "origin");
