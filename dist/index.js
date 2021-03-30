@@ -13,8 +13,6 @@ const proc = __nccwpck_require__(3129);
 const openpgp = __nccwpck_require__(7946);
 const fs = __nccwpck_require__(5747);
 
-const pgp = new openpgp();
-
 const getOrgAndRepo = async () => {
   const remotes = await simpleGit.default().getRemotes(true);
   const origin = remotes.find((remote) => remote.name === "origin");
