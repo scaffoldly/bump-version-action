@@ -3,6 +3,10 @@ const github = require("@actions/github");
 const simpleGit = require("simple-git");
 const axios = require("axios");
 const proc = require("child_process");
+const openpgp = require("openpgp");
+const fs = require("fs");
+
+const pgp = new openpgp();
 
 const getOrgAndRepo = async () => {
   const remotes = await simpleGit.default().getRemotes(true);
@@ -130,64 +134,24 @@ const terraformInit = async (organization) => {
   await exec(command);
 };
 
-const parseOutput = (output) => {
-  return output.split("\n").reduce(
-    (acc, line) => {
-      if (line.startsWith("  #")) {
-        acc.isReading = false;
-        acc.isAdding = false;
-        acc.isModifying = false;
-        acc.isDestroying = false;
-        return acc;
-      }
-
-      if (acc.isAdding) {
-        acc.adding.push(line);
-        return acc;
-      }
-
-      if (acc.isModifying) {
-        acc.modifying.push(line);
-        return acc;
-      }
-
-      if (acc.isDestroying) {
-        acc.destroying.push(line);
-        return acc;
-      }
-
-      if (line.startsWith("  + ")) {
-        acc.isAdding = true;
-        acc.adding.push(line);
-        return acc;
-      }
-
-      if (line.startsWith(" <= ")) {
-        acc.isReading = true;
-        acc.reading.push(line);
-        return acc;
-      }
-      return acc;
-    },
-    {
-      reading: [],
-      isReading: false,
-      adding: [],
-      isAdding: false,
-      destroying: [],
-      isDestroying: false,
-      modifying: [],
-      isModifying: false,
-    }
-  );
-};
-
 const terraformPlan = async () => {
   const command = `terraform plan -no-color -out planfile`;
-  const output = await exec(command);
-  const { reading, adding, destroying, modifying } = parseOutput(output);
+  const plan = await exec(command);
+  const planfile = fs.readFileSync("planfile");
+  return { plan, planfile };
+};
 
-  return { reading, adding, destroying, modifying };
+const encrypt = async (text) => {
+  const terraformCloudToken = core.getInput("terraform-cloud-token");
+
+  const message = openpgp.Message.fromText(text);
+  const stream = await openpgp.encrypt({
+    message,
+    passwords: [terraformCloudToken],
+  });
+  const encrypted = await openpgp.stream.readToEnd(stream);
+
+  return encrypted;
 };
 
 const run = async () => {
@@ -202,8 +166,14 @@ const run = async () => {
 
   switch (action) {
     case "plan": {
-      const plan = await terraformPlan();
-      console.log("!!!!! OUTPUT IS", plan);
+      const { plan, planfile } = await terraformPlan();
+      console.log("!!! plan", plan);
+      console.log("!!! planfile", Buffer.from(planfile).toString());
+
+      const encrypted = await encrypt(planfile);
+
+      console.log("!!! encrypted", encrypted);
+
       // TODO lint plan, creates, changes, deletes
       // TODO encrypt
       // TODO add pr comment
