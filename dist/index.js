@@ -141,8 +141,61 @@ const terraformInit = async (organization) => {
   await exec(command);
 };
 
+const parseOutput = (output) => {
+  return output.split("\n").reduce(
+    (acc, line) => {
+      if (line.startsWith("  #")) {
+        acc.isReading = false;
+        acc.isAdding = false;
+        acc.isModifying = false;
+        acc.isDestroying = false;
+        return acc;
+      }
+
+      if (acc.isAdding) {
+        acc.adding.push(line);
+        return acc;
+      }
+
+      if (acc.isModifying) {
+        acc.modifying.push(line);
+        return acc;
+      }
+
+      if (acc.isDestroying) {
+        acc.destroying.push(line);
+        return acc;
+      }
+
+      if (line.startsWith("  + ")) {
+        acc.isAdding = true;
+        acc.adding.push(line);
+        return acc;
+      }
+
+      if (line.startsWith(" <= ")) {
+        acc.isReading = true;
+        acc.reading.push(line);
+        return acc;
+      }
+      return acc;
+    },
+    {
+      reading: [],
+      isReading: false,
+      adding: [],
+      isAdding: false,
+      destroying: [],
+      isDestroying: false,
+      modifying: [],
+      isModifying: false,
+    }
+  );
+};
+
 const terraformPlan = async () => {
   const command = `terraform plan -no-color -out planfile`;
+<<<<<<< HEAD
   const plan = await exec(command);
   const planfile = fs.readFileSync("planfile");
   return { plan, planfile };
@@ -159,6 +212,12 @@ const encrypt = async (text) => {
   const encrypted = await openpgp.stream.readToEnd(stream);
 
   return encrypted;
+=======
+  const output = await exec(command);
+  const { reading, adding, destroying, modifying } = parseOutput(output);
+
+  return { reading, adding, destroying, modifying };
+>>>>>>> 79fd0bfb0326b70b15646405ef32ac4ff3190561
 };
 
 const run = async () => {
