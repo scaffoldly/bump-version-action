@@ -7,6 +7,7 @@ const openpgp = require("openpgp");
 const fs = require("fs");
 const semver = require("semver");
 const immutable = require("immutable");
+const { Readable } = require("stream");
 
 const SLY_FILE = "./sly.json";
 
@@ -350,7 +351,9 @@ ${output}
 const encrypt = async (text) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  const message = openpgp.Message.fromBinary(text);
+  const message = openpgp.Message.fromBinary(
+    Readable.from([text], { encoding: "binary" })
+  );
   const stream = await openpgp.encrypt({
     message,
     passwords: [terraformCloudToken],
@@ -390,6 +393,7 @@ const run = async () => {
       const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
       await draftRelease(organization, repo, plan, {
         "planfile.pgp": encrypted,
+        planfile, // TODO REMOVE
       });
       break;
     }
