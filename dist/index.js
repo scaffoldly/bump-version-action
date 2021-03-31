@@ -357,10 +357,7 @@ ${output}
 
 const encrypt = async (text) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
-
-  const message = openpgp.Message.fromBinary(
-    Readable.from([text], { encoding: "binary" })
-  );
+  const message = openpgp.Message.fromBinary(new TextEncoder().encode(text));
   const stream = await openpgp.encrypt({
     message,
     passwords: [terraformCloudToken],
