@@ -6,6 +6,7 @@ const proc = require("child_process");
 const openpgp = require("openpgp");
 const fs = require("fs");
 const semver = require("semver");
+const immutable = require("immutable");
 
 const SLY_FILE = "./sly.json";
 
@@ -51,7 +52,7 @@ const slyVersion = async (increment = false, rc = false) => {
   }
 
   const newVersion = semver.parse(
-    semver.inc(version, rc ? "prerelease" : "minor")
+    semver.inc(version, rc ? "prerelease" : "patch")
   );
   slyFile.version = newVersion.version;
 
@@ -116,10 +117,50 @@ ${plan}
     }
   );
 
-  Promise.all(assetUploadPromises);
+  await Promise.all(assetUploadPromises);
 };
 
-const release = async (org, repo) => {};
+const fetchRelease = async (org, repo) => {
+  const version = await slyVersion();
+  if (version.prerelease.length === 0) {
+    throw new Error(
+      `Unable to apply, version not a prerelease: ${version.version}`
+    );
+  }
+
+  const repoToken = core.getInput("repo-token");
+  const octokit = github.getOctokit(repoToken);
+
+  const release = await octokit.repos.getReleaseByTag({
+    owner: org,
+    repo,
+    tag: version.version,
+  });
+  if (!release || !release.data || !release.data.id) {
+    throw new Error(`Unable to find a release for tag: ${version.version}`);
+  }
+
+  console.log(
+    `Found release ID ${release.data.id} for version ${version.version}`
+  );
+
+  const releaseAssets = await octokit.repos.listReleaseAssets({
+    owner: org,
+    repo,
+    release_id: release.data.id,
+  });
+  const assetPromises = releaseAssets.data.map(async (releaseAsset) => {
+    const { data } = axios.default.get(releaseAsset.browser_download_url);
+    return { [releaseAsset.name]: data };
+  });
+  const assets = await Promise.all(assetPromises);
+
+  return {
+    releaseId: release.data.id,
+    version: version.version,
+    files: immutable.merge({}, ...assets),
+  };
+};
 
 const terraformPost = async (url, payload) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
@@ -205,13 +246,13 @@ const exec = (command) => {
   return new Promise((resolve, reject) => {
     const p = proc.exec(command, (error, stdout) => {
       if (error) {
-        reject(new Error(error));
+        reject(new Error(cleanseExecOutput(stdout)));
         return;
       }
       resolve(cleanseExecOutput(stdout));
     });
     p.stdout.pipe(process.stdout);
-    p.stderr.pipe(process.stderr);
+    p.stderr.pipe(process.stdout); // Pipe stderr to stdout too
   });
 };
 
@@ -224,10 +265,44 @@ const terraformInit = async (organization) => {
 };
 
 const terraformPlan = async () => {
-  const command = `terraform plan -no-color -out planfile`;
+  const command = `terraform plan -out planfile`;
   const plan = await exec(command);
-  const planfile = fs.readFileSync("planfile");
+  const planfile = fs.readFileSync("./planfile");
   return { plan, planfile };
+};
+
+const terraformApply = async (planfile) => {
+  const version = await slyVersion(true);
+
+  fs.writeFileSync("./planfile", planfile);
+  let output;
+  try {
+    const command = `terraform apply planfile`;
+    output = await exec(command);
+  } catch (e) {
+    output = e.message;
+  }
+
+  const repoToken = core.getInput("repo-token");
+  const octokit = github.getOctokit(repoToken);
+
+  const release = await octokit.repos.createRelease({
+    owner: org,
+    repo,
+    name: version.version,
+    tag_name: version.version,
+    body: `
+The following was applied for ${version.version}:
+
+\`\`\`
+${output}
+\`\`\`
+`,
+  });
+
+  console.log(`Created release: ${release.data.name}: ${release.data.url}`);
+
+  return { apply: output };
 };
 
 const encrypt = async (text) => {
@@ -241,6 +316,19 @@ const encrypt = async (text) => {
   const encrypted = await openpgp.stream.readToEnd(stream);
 
   return encrypted;
+};
+
+const decrypt = async (text) => {
+  const terraformCloudToken = core.getInput("terraform-cloud-token");
+
+  const message = openpgp.Message.fromText(text);
+  const stream = await openpgp.decrypt({
+    message,
+    passwords: [terraformCloudToken],
+  });
+  const decrypted = await openpgp.stream.readToEnd(stream);
+
+  return decrypted;
 };
 
 const run = async () => {
@@ -266,12 +354,15 @@ const run = async () => {
     }
 
     case "apply": {
-      console.log("!!! process.env", JSON.stringify(process.env));
+      const { files } = await fetchRelease(organization, repo);
+      const encrypted = files["planfile.pgp"];
+      const planfile = await decrypt(encrypted);
+      await terraformApply(planfile);
       break;
     }
 
     default:
-      console.error("Unknown action", action);
+      throw new Error(`Unknown action: ${action}`);
   }
 };
 
