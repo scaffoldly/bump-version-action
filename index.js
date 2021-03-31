@@ -185,6 +185,14 @@ const createTerraformWorkspace = async (organization, workspace) => {
   console.log(`[${status}] Create Workspace Response: ${JSON.stringify(data)}`);
 };
 
+const cleanseExecOutput = (output) => {
+  let cleansed = output;
+  // Remove GitHub enrichment of output
+  cleansed = cleansed.replace(/^::debug::.*\n?/gm, "");
+  cleansed = cleansed.replace(/^::set-output.*\n?/gm, "");
+  return cleansed;
+};
+
 const exec = (command) => {
   return new Promise((resolve, reject) => {
     const p = proc.exec(command, (error, stdout) => {
@@ -192,7 +200,7 @@ const exec = (command) => {
         reject(new Error(error));
         return;
       }
-      resolve(stdout);
+      resolve(cleanseExecOutput(stdout));
     });
     p.stdout.on("data", (data) => {
       process.stdout.write(data);
