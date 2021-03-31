@@ -164,15 +164,14 @@ const fetchRelease = async (org, repo) => {
     console.log(
       `Downloading release asset: ${releaseAsset.name} from url ${releaseAsset.browser_download_url}`
     );
-    const asset = await octokit.repos.getReleaseAsset({
+    const { url } = await octokit.repos.getReleaseAsset({
       owner: org,
       repo,
       asset_id: releaseAsset.id,
       headers: { accept: "application/octet-stream" },
     });
-    console.log("!!!! ASSET", JSON.stringify(asset));
-    // TODO Prob need to read the stream
-    return { [releaseAsset.name]: asset.data };
+    const { data } = await axios.default.get(url);
+    return { [releaseAsset.name]: data };
   });
   const assets = await Promise.all(assetPromises);
 
