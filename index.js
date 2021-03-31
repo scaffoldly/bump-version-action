@@ -44,7 +44,7 @@ const repoInfo = async () => {
   return { organization, repo, sha };
 };
 
-const slyVersion = async (increment = false, rc = false) => {
+const slyVersion = async (increment = false, rc = false, createTag = true) => {
   const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
   const version = semver.parse(slyFile.version);
   if (!increment) {
@@ -56,7 +56,19 @@ const slyVersion = async (increment = false, rc = false) => {
   );
   slyFile.version = newVersion.version;
 
-  const title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
+  let title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
+
+  if (!createTag) {
+    const repoToken = core.getInput("repo-token");
+    const octokit = github.getOctokit(repoToken);
+    const { organization, repo: repository } = await repoInfo();
+    const repo = await octokit.repos.get({
+      owner: organization,
+      repo: repository,
+    });
+    await simpleGit.default().checkout(repo.data.default_branch);
+    title = `Postrelease: ${newVersion.version}`;
+  }
 
   fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
   const versionCommit = await simpleGit
@@ -67,11 +79,15 @@ const slyVersion = async (increment = false, rc = false) => {
     JSON.stringify(versionCommit)
   );
 
-  const tag = await simpleGit.default().addTag(newVersion.version);
-  console.log(`Created new tag: ${tag.name}`);
+  if (createTag) {
+    const tag = await simpleGit.default().addTag(newVersion.version);
+    console.log(`Created new tag: ${tag.name}`);
 
-  await simpleGit.default().push(["--follow-tags"]);
-  await simpleGit.default().pushTags();
+    await simpleGit.default().push(["--follow-tags"]);
+    await simpleGit.default().pushTags();
+  } else {
+    await simpleGit.default().push();
+  }
 
   return semver.parse(newVersion);
 };
@@ -363,12 +379,11 @@ const run = async () => {
 
     case "apply": {
       const { files } = await fetchRelease(organization, repo);
-      console.log("!!!! files['planfile.pgp']", files["planfile.pgp"]);
       if (!files || !files["planfile.pgp"]) {
         // Handle release that is created post-apply
-        console.log(
-          "No planfile on this release, so nothing to do here! Exiting..."
-        );
+        console.log("No planfile on this release. Incrementing the version...");
+        const version = await slyVersion(true, false, false);
+        console.log(`Incremented version to ${version.version}`);
         return;
       }
       const encrypted = files["planfile.pgp"];
