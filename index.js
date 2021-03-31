@@ -135,13 +135,13 @@ ${plan}
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
 
   const assetUploadPromises = Object.entries(files).map(
-    async ([filename, contents]) => {
+    async ([filename, path]) => {
       const asset = await octokit.repos.uploadReleaseAsset({
         owner: org,
         repo,
         release_id: release.data.id,
         name: filename,
-        data: contents,
+        data: fs.readFileSync(path),
       });
 
       console.log(
@@ -193,8 +193,15 @@ const fetchRelease = async (org, repo) => {
     console.log(
       `Downloading release asset: ${releaseAsset.name} from url ${url}`
     );
-    const { data } = await axios.default.get(url);
-    return { [releaseAsset.name]: data };
+    const { data } = await axios.default.get(url, {
+      responseType: "arraybuffer",
+      responseEncoding: "binary",
+    });
+
+    const path = `./${releaseAsset.name}`;
+    fs.writeFileSync(path, data);
+
+    return { [releaseAsset.name]: path };
   });
   const assets = await Promise.all(assetPromises);
 
@@ -307,20 +314,20 @@ const terraformInit = async (organization) => {
   await exec(command);
 };
 
-const terraformPlan = async () => {
-  const command = `terraform plan -no-color -out planfile`;
+const terraformPlan = async (planfile) => {
+  const command = `terraform plan -no-color -out ${planfile}`;
   const plan = await exec(command);
-  const planfile = fs.readFileSync("./planfile");
+  //TODO Encrypt
   return { plan, planfile };
 };
 
 const terraformApply = async (planfile) => {
   const version = await slyVersion(true, false, true, false);
 
-  fs.writeFileSync("./planfile", planfile);
+  //TODO Decrypt
   let output;
   try {
-    const command = `terraform apply -no-color planfile`;
+    const command = `terraform apply -no-color ${planfile}`;
     output = await exec(command);
   } catch (e) {
     output = e.message;
@@ -386,11 +393,9 @@ const run = async () => {
   switch (action) {
     case "plan": {
       // TODO: lint planfile (terraform show -json planfile)
-      const { plan, planfile } = await terraformPlan();
-      //const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
+      const { plan, planfile } = await terraformPlan("./planfile");
       await draftRelease(organization, repo, plan, {
-        //"planfile.pgp": encrypted,
-        planfile, // TODO REMOVE
+        planfile,
       });
       break;
     }
@@ -399,15 +404,12 @@ const run = async () => {
       const { files } = await fetchRelease(organization, repo);
       if (!files || files.length === 0) {
         // Handle release that is created post-apply
-        console.log("No planfile on this release. Incrementing the version...");
+        console.log("No files on this release. Incrementing the version...");
         const version = await slyVersion(true, false, false);
         console.log(`Incremented version to ${version.version}`);
         return;
       }
-      // TODO: Terraform is complaining that it's not a zip?!?!
-      const planfile = files["planfile"]; // TODO Switch back to encrypted
-      // const planfile = await decrypt(encrypted);
-      await terraformApply(planfile);
+      await terraformApply(files["planfile"]);
       break;
     }
 
