@@ -317,7 +317,7 @@ const terraformInit = async (organization) => {
 const terraformPlan = async () => {
   const command = `terraform plan -no-color -out planfile`;
   const plan = await exec(command);
-  const planfile = fs.readFileSync("./planfile", "binary");
+  const planfile = fs.readFileSync("./planfile");
   return { plan, planfile };
 };
 
@@ -357,7 +357,7 @@ ${output}
 
 const encrypt = async (text) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
-  const message = openpgp.Message.fromBinary(new TextEncoder().encode(text));
+  const message = openpgp.Message.fromText(stream);
   const stream = await openpgp.encrypt({
     message,
     passwords: [terraformCloudToken],
@@ -394,9 +394,9 @@ const run = async () => {
     case "plan": {
       // TODO: lint planfile (terraform show -json planfile)
       const { plan, planfile } = await terraformPlan();
-      const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
+      //const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
       await draftRelease(organization, repo, plan, {
-        "planfile.pgp": encrypted,
+        //"planfile.pgp": encrypted,
         planfile, // TODO REMOVE
       });
       break;
@@ -404,7 +404,7 @@ const run = async () => {
 
     case "apply": {
       const { files } = await fetchRelease(organization, repo);
-      if (!files || !files["planfile.pgp"]) {
+      if (!files || files.length === 0) {
         // Handle release that is created post-apply
         console.log("No planfile on this release. Incrementing the version...");
         const version = await slyVersion(true, false, false);
@@ -412,8 +412,8 @@ const run = async () => {
         return;
       }
       // TODO: Terraform is complaining that it's not a zip?!?!
-      const encrypted = files["planfile.pgp"];
-      const planfile = await decrypt(encrypted);
+      const planfile = files["planfile"]; // TODO Switch back to encrypted
+      // const planfile = await decrypt(encrypted);
       await terraformApply(planfile);
       break;
     }
