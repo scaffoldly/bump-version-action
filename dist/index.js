@@ -272,7 +272,7 @@ const terraformInit = async (organization) => {
 };
 
 const terraformPlan = async () => {
-  const command = `terraform plan -out planfile`;
+  const command = `terraform plan -no-color -out planfile`;
   const plan = await exec(command);
   const planfile = fs.readFileSync("./planfile");
   return { plan, planfile };
@@ -284,7 +284,7 @@ const terraformApply = async (planfile) => {
   fs.writeFileSync("./planfile", planfile);
   let output;
   try {
-    const command = `terraform apply planfile`;
+    const command = `terraform apply -no-color planfile`;
     output = await exec(command);
   } catch (e) {
     output = e.message;
