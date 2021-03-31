@@ -149,22 +149,20 @@ const fetchRelease = async (org, repo) => {
     repo,
     release_id: release.data.id,
   });
-  console.log(
-    `Found ${releaseAssets.data.length} release assets`,
-    JSON.stringify(releaseAssets) // TODO: Remove this
-  );
+  console.log(`Found ${releaseAssets.data.length} release assets`);
   const assetPromises = releaseAssets.data.map(async (releaseAsset) => {
-    console.log(
-      `Downloading release asset: ${releaseAsset.name} from url ${releaseAsset.browser_download_url}`
-    );
     const { url } = await octokit.repos.getReleaseAsset({
       owner: org,
       repo,
       asset_id: releaseAsset.id,
       headers: { accept: "application/octet-stream" },
     });
-    const { data } = await axios.default.get(url);
-    return { [releaseAsset.name]: data };
+    console.log(
+      `Downloading release asset: ${releaseAsset.name} from url ${url}`
+    );
+    const response = await axios.default.get(url);
+    console.log("!!!! response", response);
+    return { [releaseAsset.name]: response.data };
   });
   const assets = await Promise.all(assetPromises);
 
@@ -389,6 +387,7 @@ const run = async () => {
   try {
     await run();
   } catch (e) {
+    console.error(e);
     core.setFailed(e.message);
   }
 })();
