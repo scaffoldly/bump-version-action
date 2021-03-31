@@ -44,14 +44,19 @@ const repoInfo = async () => {
   return { organization, repo, sha };
 };
 
-const slyVersion = async (increment = false, rc = false, createTag = true) => {
+const slyVersion = async (
+  increment = false,
+  rc = false,
+  createTag = true,
+  commit = true
+) => {
   const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
   const version = semver.parse(slyFile.version);
   if (!increment) {
     return version;
   }
 
-  const newVersion = semver.parse(
+  let newVersion = semver.parse(
     semver.inc(version, rc ? "prerelease" : "patch")
   );
   slyFile.version = newVersion.version;
@@ -59,6 +64,10 @@ const slyVersion = async (increment = false, rc = false, createTag = true) => {
   let title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
 
   if (!createTag) {
+    //Bump version one more time since bumping master's version
+    //(Ensures that there's no prerelease and patch increases)
+    newVersion = semver.parse(semver.inc(newVersion, "patch"));
+
     const repoToken = core.getInput("repo-token");
     const octokit = github.getOctokit(repoToken);
     const { organization, repo: repository } = await repoInfo();
@@ -70,23 +79,30 @@ const slyVersion = async (increment = false, rc = false, createTag = true) => {
     title = `Postrelease: ${newVersion.version}`;
   }
 
-  fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
-  const versionCommit = await simpleGit
-    .default()
-    .commit(`CI: ${title}`, SLY_FILE);
-  console.log(
-    `Committed new version: ${newVersion.version}`,
-    JSON.stringify(versionCommit)
-  );
+  if (commit) {
+    fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
+    const versionCommit = await simpleGit
+      .default()
+      .commit(`CI: ${title}`, SLY_FILE);
+    console.log(
+      `Committed new version: ${newVersion.version}`,
+      JSON.stringify(versionCommit)
+    );
+  }
 
   if (createTag) {
     const tag = await simpleGit.default().addTag(newVersion.version);
     console.log(`Created new tag: ${tag.name}`);
 
-    await simpleGit.default().push(["--follow-tags"]);
+    if (commit) {
+      await simpleGit.default().push(["--follow-tags"]);
+    }
+
     await simpleGit.default().pushTags();
   } else {
-    await simpleGit.default().push();
+    if (commit) {
+      await simpleGit.default().push();
+    }
   }
 
   return semver.parse(newVersion);
@@ -298,7 +314,7 @@ const terraformPlan = async () => {
 };
 
 const terraformApply = async (planfile) => {
-  const version = await slyVersion(true);
+  const version = await slyVersion(true, false, true, false);
 
   fs.writeFileSync("./planfile", planfile);
   let output;
