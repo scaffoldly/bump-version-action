@@ -166,7 +166,13 @@ const fetchRelease = async (org, repo) => {
     );
     const { data } = await axios.default.get(
       releaseAsset.browser_download_url,
-      { auth: { username: repoToken } }
+      {
+        headers: {
+          Authorization: `Bearer ${repoToken}`,
+          "User-Agent": "Scaffoldly Bootstrap Action",
+          "Content-Type": releaseAsset.content_type,
+        },
+      }
     );
     return { [releaseAsset.name]: data };
   });
