@@ -331,12 +331,11 @@ const encrypt = async (text) => {
 const decrypt = async (text) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  const message = openpgp.Message.fromText(text);
-  const stream = await openpgp.decrypt({
+  const message = openpgp.readMessage({ armoredMessage: text });
+  const { data: decrypted } = await openpgp.decrypt({
     message,
     passwords: [terraformCloudToken],
   });
-  const decrypted = await openpgp.stream.readToEnd(stream);
 
   return decrypted;
 };
