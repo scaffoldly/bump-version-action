@@ -164,17 +164,15 @@ const fetchRelease = async (org, repo) => {
     console.log(
       `Downloading release asset: ${releaseAsset.name} from url ${releaseAsset.browser_download_url}`
     );
-    const { data } = await axios.default.get(
-      releaseAsset.browser_download_url,
-      {
-        headers: {
-          Authorization: `Bearer ${repoToken}`,
-          "User-Agent": "Scaffoldly Bootstrap Action",
-          "Content-Type": releaseAsset.content_type,
-        },
-      }
-    );
-    return { [releaseAsset.name]: data };
+    const asset = await octokit.repos.getReleaseAsset({
+      owner: org,
+      repo,
+      asset_id: releaseAsset.id,
+      headers: { accept: "application/octet-stream" },
+    });
+    console.log("!!!! ASSET", JSON.stringify(asset));
+    // TODO Prob need to read the stream
+    return { [releaseAsset.name]: asset.data };
   });
   const assets = await Promise.all(assetPromises);
 
@@ -371,7 +369,6 @@ const run = async () => {
       const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
       await draftRelease(organization, repo, plan, {
         "planfile.pgp": encrypted,
-        planfile, // TODO: Remove this
       });
       break;
     }
