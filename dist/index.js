@@ -164,7 +164,10 @@ const fetchRelease = async (org, repo) => {
     console.log(
       `Downloading release asset: ${releaseAsset.name} from url ${releaseAsset.browser_download_url}`
     );
-    const { data } = await axios.default.get(releaseAsset.browser_download_url);
+    const { data } = await axios.default.get(
+      releaseAsset.browser_download_url,
+      { auth: { username: repoToken } }
+    );
     return { [releaseAsset.name]: data };
   });
   const assets = await Promise.all(assetPromises);
