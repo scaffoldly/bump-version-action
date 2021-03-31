@@ -83,8 +83,9 @@ const slyVersion = async (increment = false, rc = false) => {
 };
 
 // TODO: Handle PR -- Plan only as PR Comment
-// TODO: Skip if commit message is "Initial Release"
-const draftRelease = async (org, repo, plan, planfile) => {
+// TODO: Skip if commit message is "Initial Whatever" (from repo template)
+// TODO: Glob Up Commit Messages since last release
+const draftRelease = async (org, repo, plan, files) => {
   const version = await slyVersion(true, true);
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
@@ -95,7 +96,6 @@ const draftRelease = async (org, repo, plan, planfile) => {
     name: version.version,
     tag_name: version.version,
     draft: true,
-    prerelease: true,
     body: `
 The following plan was created for ${version.version}:
 
@@ -107,18 +107,26 @@ ${plan}
 
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
 
-  const asset = await octokit.repos.uploadReleaseAsset({
-    owner: org,
-    repo,
-    release_id: release.data.id,
-    name: "planfile.pgp",
-    data: planfile,
-  });
+  const assetUploadPromises = Object.entries(files).map(
+    async ([filename, contents]) => {
+      const asset = await octokit.repos.uploadReleaseAsset({
+        owner: org,
+        repo,
+        release_id: release.data.id,
+        name: filename,
+        data: contents,
+      });
 
-  console.log(
-    `Uploaded planfile to release ${release.data.name}: ${asset.data.url}`
+      console.log(
+        `Uploaded planfile to release ${release.data.name}: ${asset.data.url}`
+      );
+    }
   );
+
+  Promise.all(assetUploadPromises);
 };
+
+const release = async (org, repo) => {};
 
 const terraformPost = async (url, payload) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
@@ -209,12 +217,8 @@ const exec = (command) => {
       }
       resolve(cleanseExecOutput(stdout));
     });
-    p.stdout.on("data", (data) => {
-      process.stdout.write(data);
-    });
-    p.stderr.on("data", (data) => {
-      process.stderr.write(data);
-    });
+    p.stdout.pipe(process.stdout);
+    p.stderr.pipe(process.stderr);
   });
 };
 
@@ -260,8 +264,16 @@ const run = async () => {
     case "plan": {
       // TODO: lint planfile (terraform show -json planfile)
       const { plan, planfile } = await terraformPlan();
-      const encrypted = await encrypt(planfile);
-      await draftRelease(organization, repo, plan, encrypted);
+      const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
+      await draftRelease(organization, repo, plan, {
+        "planfile.pgp": encrypted,
+        planfile, // TODO: Remove this
+      });
+      break;
+    }
+
+    case "apply": {
+      console.log("!!! process.env", JSON.stringify(process.env));
       break;
     }
 
