@@ -149,8 +149,15 @@ const fetchRelease = async (org, repo) => {
     repo,
     release_id: release.data.id,
   });
+  console.log(
+    `Found ${releaseAssets.data.length} release assets`,
+    JSON.stringify(releaseAssets) // TODO: Remove this
+  );
   const assetPromises = releaseAssets.data.map(async (releaseAsset) => {
-    const { data } = axios.default.get(releaseAsset.browser_download_url);
+    console.log(
+      `Downloading release asset: ${releaseAsset.name} from url ${releaseAsset.browser_download_url}`
+    );
+    const { data } = await axios.default.get(releaseAsset.browser_download_url);
     return { [releaseAsset.name]: data };
   });
   const assets = await Promise.all(assetPromises);
