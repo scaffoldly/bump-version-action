@@ -355,6 +355,13 @@ const run = async () => {
 
     case "apply": {
       const { files } = await fetchRelease(organization, repo);
+      if (!files || !files["planfile.pgp"]) {
+        // Handle release that is created post-apply
+        console.log(
+          "No planfile on this release, so nothing to do here! Exiting..."
+        );
+        return;
+      }
       const encrypted = files["planfile.pgp"];
       const planfile = await decrypt(encrypted);
       await terraformApply(planfile);
