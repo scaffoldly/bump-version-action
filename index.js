@@ -53,7 +53,7 @@ const slyVersion = async (increment = false, rc = false) => {
   const newVersion = semver.parse(
     semver.inc(version, rc ? "prerelease" : "minor")
   );
-  sly.version = newVersion.version;
+  slyFile.version = newVersion.version;
 
   const title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
 
@@ -76,6 +76,7 @@ const slyVersion = async (increment = false, rc = false) => {
 };
 
 // TODO: Handle PR -- Plan only as PR Comment
+// TODO: Skip if commit message is "Initial Release"
 const draftRelease = async (org, repo, plan, planfile) => {
   const version = await slyVersion(true, true);
   const repoToken = core.getInput("repo-token");
