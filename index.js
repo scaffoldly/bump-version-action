@@ -5,8 +5,20 @@ const axios = require("axios");
 const proc = require("child_process");
 const openpgp = require("openpgp");
 const fs = require("fs");
+const semver = require("semver");
 
-const getOrgAndRepo = async () => {
+const SLY_FILE = "./sly.json";
+
+const repoInfo = async () => {
+  const rootEmail = core.getInput("root-email");
+  await simpleGit
+    .default()
+    .addConfig("user.name", "Scaffoldly Bootstrap Action");
+  await simpleGit.default().addConfig("user.email", rootEmail);
+
+  const log = await simpleGit.default().log({ maxCount: 1 });
+  const sha = log.latest.hash;
+
   const remotes = await simpleGit.default().getRemotes(true);
   const origin = remotes.find((remote) => remote.name === "origin");
   if (!origin) {
@@ -28,7 +40,76 @@ const getOrgAndRepo = async () => {
     throw new Error(`Unable to extract repo from ${pathname}`);
   }
 
-  return { organization, repo };
+  return { organization, repo, sha };
+};
+
+const slyVersion = async (increment = false, rc = false) => {
+  const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
+  const version = semver.parse(slyFile.version);
+  if (!increment) {
+    return version;
+  }
+
+  const newVersion = semver.parse(
+    semver.inc(version, rc ? "prerelease" : "minor")
+  );
+  sly.version = newVersion.version;
+
+  const title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
+
+  fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
+  const versionCommit = await simpleGit
+    .default()
+    .commit(`CI: ${title}`, SLY_FILE);
+  console.log(
+    `Committed new version: ${newVersion.version}`,
+    JSON.stringify(versionCommit)
+  );
+
+  const tag = await simpleGit.default().addTag(newVersion.version);
+  console.log(`Created new tag: ${tag.name}`);
+
+  await simpleGit.default().push(["--follow-tags"]);
+  await simpleGit.default().pushTags();
+
+  return semver.parse(newVersion);
+};
+
+// TODO: Handle PR -- Plan only as PR Comment
+const draftRelease = async (org, repo, plan, planfile) => {
+  const version = await slyVersion(true, true);
+  const repoToken = core.getInput("repo-token");
+  const octokit = github.getOctokit(repoToken);
+
+  const release = await octokit.repos.createRelease({
+    owner: org,
+    repo,
+    name: version.version,
+    tag_name: version.version,
+    draft: true,
+    prerelease: true,
+    body: `
+The following plan was created for ${version.version}:
+
+\`\`\`
+${plan}
+\`\`\`
+`,
+  });
+
+  console.log(`Created release: ${release.data.name}: ${release.data.url}`);
+
+  const asset = await octokit.repos.uploadReleaseAsset({
+    owner: org,
+    repo,
+    release_id: release.data.id,
+    name: "planfile.pgp",
+    data: planfile,
+  });
+
+  console.log(
+    `Uploaded planfile to release ${release.data.name}: ${asset.data.url}`
+  );
 };
 
 const terraformPost = async (url, payload) => {
@@ -105,22 +186,19 @@ const createTerraformWorkspace = async (organization, workspace) => {
 
 const exec = (command) => {
   return new Promise((resolve, reject) => {
-    let log = "";
-    const process = proc.exec(command, (error, stdout) => {
+    const p = proc.exec(command, (error, stdout) => {
       if (error) {
         reject(new Error(error));
         return;
       }
       resolve(stdout);
     });
-    // process.stdout.on("data", (data) => {
-    //   log = `${log}${data}`;
-    //   console.log(data);
-    // });
-    // process.stderr.on("data", (data) => {
-    //   log = `${log}${data}`;
-    //   console.log(data);
-    // });
+    p.stdout.on("data", (data) => {
+      process.stdout.write(data);
+    });
+    p.stderr.on("data", (data) => {
+      process.stderr.write(data);
+    });
   });
 };
 
@@ -153,7 +231,7 @@ const encrypt = async (text) => {
 };
 
 const run = async () => {
-  const { organization, repo } = await getOrgAndRepo();
+  const { organization, repo } = await repoInfo();
   core.setOutput("organization", organization);
 
   await createTerraformOrganization(organization);
@@ -164,20 +242,10 @@ const run = async () => {
 
   switch (action) {
     case "plan": {
+      // TODO: lint planfile (terraform show -json planfile)
       const { plan, planfile } = await terraformPlan();
-      console.log("!!! plan", plan);
-      console.log("!!! planfile", Buffer.from(planfile).toString());
-
       const encrypted = await encrypt(planfile);
-
-      console.log("!!! encrypted", encrypted);
-
-      // TODO lint plan, creates, changes, deletes
-      // TODO encrypt
-      // TODO add pr comment
-      // TODO create release
-      // TODO upload planfile
-      // TODO upload plan output
+      await draftRelease(organization, repo, plan, encrypted);
       break;
     }
 
