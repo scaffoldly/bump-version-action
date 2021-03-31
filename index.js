@@ -330,6 +330,10 @@ const terraformApply = async (org, repo, planfile) => {
     const command = `terraform apply -no-color ${planfile}`;
     output = await exec(command);
   } catch (e) {
+    console.log(
+      "Error while applying, setting the action as failed, but continuing for housecleaning..."
+    );
+    core.setFailed(e);
     output = e.message;
   }
 
