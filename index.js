@@ -321,7 +321,7 @@ const terraformPlan = async (planfile) => {
   return { plan, planfile };
 };
 
-const terraformApply = async (planfile) => {
+const terraformApply = async (org, repo, planfile) => {
   const version = await slyVersion(true, false, true, false);
 
   //TODO Decrypt
@@ -409,7 +409,7 @@ const run = async () => {
         console.log(`Incremented version to ${version.version}`);
         return;
       }
-      await terraformApply(files["planfile"]);
+      await terraformApply(organization, repo, files["planfile"]);
       break;
     }
 
