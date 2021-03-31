@@ -160,9 +160,8 @@ const fetchRelease = async (org, repo) => {
     console.log(
       `Downloading release asset: ${releaseAsset.name} from url ${url}`
     );
-    const response = await axios.default.get(url);
-    console.log("!!!! response", response);
-    return { [releaseAsset.name]: response.data };
+    const { data } = await axios.default.get(url);
+    return { [releaseAsset.name]: data };
   });
   const assets = await Promise.all(assetPromises);
 
@@ -365,6 +364,7 @@ const run = async () => {
 
     case "apply": {
       const { files } = await fetchRelease(organization, repo);
+      console.log("!!!! files['planfile.pgp']", files["planfile.pgp"]);
       if (!files || !files["planfile.pgp"]) {
         // Handle release that is created post-apply
         console.log(
