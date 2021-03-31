@@ -14,6 +14,7 @@ const openpgp = __nccwpck_require__(7946);
 const fs = __nccwpck_require__(5747);
 const semver = __nccwpck_require__(1383);
 const immutable = __nccwpck_require__(3609);
+const { Readable } = __nccwpck_require__(2413);
 
 const SLY_FILE = "./sly.json";
 
@@ -357,7 +358,9 @@ ${output}
 const encrypt = async (text) => {
   const terraformCloudToken = core.getInput("terraform-cloud-token");
 
-  const message = openpgp.Message.fromBinary(text);
+  const message = openpgp.Message.fromBinary(
+    Readable.from([text], { encoding: "binary" })
+  );
   const stream = await openpgp.encrypt({
     message,
     passwords: [terraformCloudToken],
@@ -397,6 +400,7 @@ const run = async () => {
       const encrypted = await encrypt(planfile); // TODO Switch back to encrypted planfile
       await draftRelease(organization, repo, plan, {
         "planfile.pgp": encrypted,
+        planfile, // TODO REMOVE
       });
       break;
     }
