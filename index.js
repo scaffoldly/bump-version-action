@@ -45,66 +45,36 @@ const repoInfo = async () => {
   return { organization, repo, sha };
 };
 
-const slyVersion = async (
-  increment = false,
-  rc = false,
-  createTag = true,
-  commit = true
-) => {
+const slyVersionFetch = () => {
   const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
   const version = semver.parse(slyFile.version);
-  if (!increment) {
-    return version;
-  }
+  return version;
+};
+
+const slyVersionIncrement = async (rc = false) => {
+  const version = slyVersionFetch();
 
   let newVersion = semver.parse(
     semver.inc(version, rc ? "prerelease" : "patch")
   );
   slyFile.version = newVersion.version;
 
-  let title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
+  const title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
 
-  if (!createTag) {
-    //Bump version one more time since bumping master's version
-    //(Ensures that there's no prerelease and patch increases)
-    newVersion = semver.parse(semver.inc(newVersion, "patch"));
+  fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
+  const versionCommit = await simpleGit
+    .default()
+    .commit(`CI: ${title}`, SLY_FILE);
+  console.log(
+    `Committed new version: ${newVersion.version}`,
+    JSON.stringify(versionCommit)
+  );
 
-    const repoToken = core.getInput("repo-token");
-    const octokit = github.getOctokit(repoToken);
-    const { organization, repo: repository } = await repoInfo();
-    const repo = await octokit.repos.get({
-      owner: organization,
-      repo: repository,
-    });
-    await simpleGit.default().checkout(repo.data.default_branch);
-    title = `Postrelease: ${newVersion.version}`;
-  }
+  const tag = await simpleGit.default().addTag(newVersion.version);
+  console.log(`Created new tag: ${tag.name}`);
 
-  if (commit) {
-    fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
-    const versionCommit = await simpleGit
-      .default()
-      .commit(`CI: ${title}`, SLY_FILE);
-    console.log(
-      `Committed new version: ${newVersion.version}`,
-      JSON.stringify(versionCommit)
-    );
-  }
-
-  if (createTag) {
-    const tag = await simpleGit.default().addTag(newVersion.version);
-    console.log(`Created new tag: ${tag.name}`);
-
-    if (commit) {
-      await simpleGit.default().push(["--follow-tags"]);
-    }
-
-    await simpleGit.default().pushTags();
-  } else {
-    if (commit) {
-      await simpleGit.default().push();
-    }
-  }
+  await simpleGit.default().push(["--follow-tags"]);
+  await simpleGit.default().pushTags();
 
   return semver.parse(newVersion);
 };
@@ -113,7 +83,7 @@ const slyVersion = async (
 // TODO: Skip if commit message is "Initial Whatever" (from repo template)
 // TODO: Glob Up Commit Messages since last release
 const draftRelease = async (org, repo, plan, files) => {
-  const version = await slyVersion(true, true);
+  const version = await slyVersionIncrement(true);
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
 
@@ -154,7 +124,7 @@ ${plan}
 };
 
 const fetchRelease = async (org, repo) => {
-  const version = await slyVersion();
+  const version = slyVersionFetch();
   if (version.prerelease.length === 0) {
     throw new Error(
       `Unable to apply, version not a prerelease: ${version.version}`
@@ -207,7 +177,7 @@ const fetchRelease = async (org, repo) => {
 
   return {
     releaseId: release.data.id,
-    version: version.version,
+    version,
     files: immutable.merge({}, ...assets),
   };
 };
@@ -322,7 +292,7 @@ const terraformPlan = async (planfile) => {
 };
 
 const terraformApply = async (org, repo, planfile) => {
-  const version = await slyVersion(true, false, true, false);
+  let version = semver.inc(slyVersionFetch(), "patch");
 
   //TODO Decrypt
   let output;
@@ -356,7 +326,7 @@ ${output}
 
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
 
-  return { apply: output };
+  return { apply: output, version };
 };
 
 const encrypt = async (text) => {
@@ -405,15 +375,16 @@ const run = async () => {
     }
 
     case "apply": {
-      const { files } = await fetchRelease(organization, repo);
+      const { files, version } = await fetchRelease(organization, repo);
       if (!files || files.length === 0) {
-        // Handle release that is created post-apply
-        console.log("No files on this release. Incrementing the version...");
-        const version = await slyVersion(true, false, false);
-        console.log(`Incremented version to ${version.version}`);
-        return;
+        throw new Error(`No release assets on version ${version}`);
       }
-      await terraformApply(organization, repo, files["planfile"]);
+      const { version: newVersion } = await terraformApply(
+        organization,
+        repo,
+        files["planfile"]
+      );
+      // TODO Increment version on default branch
       break;
     }
 
