@@ -58,17 +58,22 @@ const slyVersionFetch = () => {
   return version;
 };
 
+const slyVersionSet = (version) => {
+  const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
+  slyFile.version = version;
+  fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
+};
+
 const slyVersionIncrement = async (rc = false) => {
   const version = slyVersionFetch();
 
   let newVersion = semver.parse(
     semver.inc(version, rc ? "prerelease" : "patch")
   );
-  slyFile.version = newVersion.version;
+  slyVersionSet(version.version);
 
   const title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
 
-  fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
   const versionCommit = await simpleGit
     .default()
     .commit(`CI: ${title}`, SLY_FILE);
@@ -392,7 +397,7 @@ const run = async () => {
         files["planfile"]
       );
       // TODO Increment version on default branch
-      
+
       break;
     }
 
