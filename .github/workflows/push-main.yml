@@ -1,8 +1,8 @@
 name: Push to Main
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main, master]
 jobs:
   bump-version:
     runs-on: ubuntu-latest
