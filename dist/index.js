@@ -308,8 +308,8 @@ const exec = (command) => {
         return;
       }
       resolve({
-        stdout: cleanseExecOutput(output),
-        stderr: cleanseExecOutput(output),
+        stdout: cleanseExecOutput(stdout),
+        stderr: cleanseExecOutput(stderr),
       });
     });
 
@@ -317,10 +317,10 @@ const exec = (command) => {
     p.stderr.pipe(process.stdout); // Pipe stderr to stdout too
 
     p.stdout.on("data", (chunk) => {
-      stdout = `${output}${chunk}`;
+      stdout = `${stdout}${chunk}`;
     });
     p.stderr.on("data", (chunk) => {
-      stderr = `${output}${chunk}`;
+      stderr = `${stderr}${chunk}`;
     });
   });
 };
