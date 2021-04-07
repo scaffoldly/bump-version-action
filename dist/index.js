@@ -300,23 +300,27 @@ const cleanseExecOutput = (output) => {
 
 const exec = (command) => {
   return new Promise((resolve, reject) => {
-    let output = "";
+    let stdout = "";
+    let stderr = "";
     const p = proc.exec(command, (error) => {
       if (error) {
-        reject(new Error(cleanseExecOutput(output)));
+        reject(error);
         return;
       }
-      resolve(cleanseExecOutput(output));
+      resolve({
+        stdout: cleanseExecOutput(output),
+        stderr: cleanseExecOutput(output),
+      });
     });
 
     p.stdout.pipe(process.stdout);
     p.stderr.pipe(process.stdout); // Pipe stderr to stdout too
 
     p.stdout.on("data", (chunk) => {
-      output = `${output}${chunk}`;
+      stdout = `${output}${chunk}`;
     });
     p.stderr.on("data", (chunk) => {
-      output = `${output}${chunk}`;
+      stderr = `${output}${chunk}`;
     });
   });
 };
@@ -331,7 +335,7 @@ const terraformInit = async (organization) => {
 
 const terraformPlan = async (planfile) => {
   const command = `terraform plan -no-color -out ${planfile}`;
-  const plan = await exec(command);
+  const { stdout: plan } = await exec(command);
   //TODO Encrypt
   return { plan, planfile };
 };
@@ -343,7 +347,8 @@ const terraformApply = async (org, repo, planfile) => {
   let output;
   try {
     const command = `terraform apply -no-color ${planfile}`;
-    output = await exec(command);
+    const { stdout } = await exec(command);
+    output = stdout;
   } catch (e) {
     console.log(
       "Error while applying, setting the action as failed, but continuing for housecleaning..."
