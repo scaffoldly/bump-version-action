@@ -295,15 +295,23 @@ const exec = (command) => {
   return new Promise((resolve, reject) => {
     let stdout = "";
     let stderr = "";
-    const p = proc.exec(command, (error) => {
-      if (error) {
-        reject(error);
+
+    const parts = command.split(" ");
+    const p = proc.spawn(parts[0], parts.slice(1));
+
+    p.on("error", (err) => {
+      reject(err);
+    });
+
+    p.on("exit", (code, signal) => {
+      if (code === 0) {
+        resolve({
+          stdout: cleanseExecOutput(stdout),
+          stderr: cleanseExecOutput(stderr),
+        });
         return;
       }
-      resolve({
-        stdout: cleanseExecOutput(stdout),
-        stderr: cleanseExecOutput(stderr),
-      });
+      reject(new Error(`Command '${command}' exited with code ${code}`));
     });
 
     p.stdout.pipe(process.stdout);
