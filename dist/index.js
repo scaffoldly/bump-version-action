@@ -64,19 +64,16 @@ const slyVersionSet = (version) => {
   fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
 };
 
-const slyVersionIncrement = async (rc = false) => {
+const prerelease = async () => {
   const version = slyVersionFetch();
 
-  let newVersion = semver.parse(
-    semver.inc(version, rc ? "prerelease" : "patch")
-  );
+  const newVersion = semver.parse(semver.inc(version, "prerelease"));
+
   slyVersionSet(version.version);
 
-  const title = `${rc ? "Prerelease" : "Release"}: ${newVersion.version}`;
+  const title = `CI: Prerelease: ${newVersion.version}`;
 
-  const versionCommit = await simpleGit
-    .default()
-    .commit(`CI: ${title}`, SLY_FILE);
+  const versionCommit = await simpleGit.default().commit(title, SLY_FILE);
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(versionCommit)
@@ -88,14 +85,41 @@ const slyVersionIncrement = async (rc = false) => {
   await simpleGit.default().push(["--follow-tags"]);
   await simpleGit.default().pushTags();
 
-  return semver.parse(newVersion);
+  return { version: newVersion };
+};
+
+const postrelease = async (org, repo) => {
+  const repoToken = core.getInput("repo-token");
+  const octokit = github.getOctokit(repoToken);
+
+  const info = await octokit.repos.get({ owner: org, repo });
+  const defaultBranch = info.data.default_branch;
+
+  await simpleGit.default().fetch();
+  await simpleGit.default().checkout(defaultBranch);
+
+  const version = slyVersionFetch();
+  const newVersion = semver.parse(semver.inc(version, "patch"));
+
+  slyVersionSet(newVersion.version);
+
+  const title = `CI: Postrelease: ${newVersion.version}`;
+
+  const commit = await simpleGit.default().commit(title, SLY_FILE);
+  console.log(
+    `Committed new version: ${newVersion.version}`,
+    JSON.stringify(commit)
+  );
+
+  await simpleGit.default().push();
+
+  return { version: newVersion };
 };
 
 // TODO: Handle PR -- Plan only as PR Comment
 // TODO: Skip if commit message is "Initial Whatever" (from repo template)
 // TODO: Glob Up Commit Messages since last release
-const draftRelease = async (org, repo, plan, files) => {
-  const version = await slyVersionIncrement(true);
+const draftRelease = async (org, repo, version, plan, files) => {
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
 
@@ -379,8 +403,9 @@ const run = async () => {
   switch (action) {
     case "plan": {
       // TODO: lint planfile (terraform show -json planfile)
+      const { version } = await prerelease();
       const { plan, planfile } = await terraformPlan("./planfile");
-      await draftRelease(organization, repo, plan, {
+      await draftRelease(organization, repo, version, plan, {
         planfile,
       });
       break;
@@ -391,13 +416,8 @@ const run = async () => {
       if (!files || files.length === 0) {
         throw new Error(`No release assets on version ${version}`);
       }
-      const { version: newVersion } = await terraformApply(
-        organization,
-        repo,
-        files["planfile"]
-      );
-      // TODO Increment version on default branch
-
+      await terraformApply(organization, repo, files["planfile"]);
+      await postrelease(organization, repo);
       break;
     }
 

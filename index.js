@@ -88,6 +88,7 @@ const postrelease = async (org, repo) => {
   const info = await octokit.repos.get({ owner: org, repo });
   const defaultBranch = info.data.default_branch;
 
+  await simpleGit.default().fetch();
   await simpleGit.default().checkout(defaultBranch);
 
   const version = slyVersionFetch();
