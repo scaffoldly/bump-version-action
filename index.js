@@ -293,15 +293,24 @@ const cleanseExecOutput = (output) => {
 
 const exec = (command) => {
   return new Promise((resolve, reject) => {
-    const p = proc.exec(command, (error, stdout) => {
+    let output = "";
+    const p = proc.exec(command, (error) => {
       if (error) {
-        reject(new Error(cleanseExecOutput(stdout)));
+        reject(new Error(cleanseExecOutput(output)));
         return;
       }
-      resolve(cleanseExecOutput(stdout));
+      resolve(cleanseExecOutput(output));
     });
+
     p.stdout.pipe(process.stdout);
     p.stderr.pipe(process.stdout); // Pipe stderr to stdout too
+
+    p.stdout.on("data", (chunk) => {
+      output = `${output}${chunk}`;
+    });
+    p.stderr.on("data", (chunk) => {
+      output = `${output}${chunk}`;
+    });
   });
 };
 
