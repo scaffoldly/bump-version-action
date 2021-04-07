@@ -304,7 +304,7 @@ const exec = (command) => {
     let stderr = "";
 
     const parts = command.split(" ");
-    const p = proc.spawn(parts[0], parts.slice(1));
+    const p = proc.spawn(parts[0], parts.slice(1), { shell: true });
 
     p.on("error", (err) => {
       reject(err);
