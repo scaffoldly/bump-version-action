@@ -304,7 +304,7 @@ const terraformPlan = async (planfile) => {
 };
 
 const terraformApply = async (org, repo, planfile) => {
-  let version = semver.inc(slyVersionFetch(), "patch");
+  let version = semver.parse(semver.inc(slyVersionFetch(), "patch"));
 
   //TODO Decrypt
   let output;
