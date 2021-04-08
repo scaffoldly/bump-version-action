@@ -452,7 +452,7 @@ const run = async () => {
     case "sh": {
       const command = core.getInput("command", { required: true });
       console.log(`Running shell command: ${command}`);
-      await exec(org, command);
+      await exec(organization, command);
     }
 
     default:
