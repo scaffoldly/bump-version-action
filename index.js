@@ -334,7 +334,7 @@ const terraformInit = async (organization) => {
 
   const command = `terraform init -backend-config="hostname=app.terraform.io" -backend-config="organization=${organization}" -backend-config="token=${terraformCloudToken}"`;
 
-  await exec(command);
+  await exec(organization, command);
 };
 
 const terraformPlan = async (organization, planfile) => {
