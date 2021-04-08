@@ -4,6 +4,9 @@ inputs:
   action:
     description: "The action to run: 'plan` or 'apply'"
     required: true
+  command:
+    description: "The shell command to run with the 'sh' action"
+    required: false
   repo-token:
     description: "The GitHub token for this repo. (https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)"
     required: true
