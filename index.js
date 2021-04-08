@@ -300,6 +300,14 @@ const exec = (org, command) => {
     let stdout = "";
     let stderr = "";
 
+    const env = {
+      ...process.env,
+      TF_VAR_BOOTSTRAP_ORGANIZATION: org,
+    };
+
+    console.log(`Using Env: ${JSON.stringify(env)}`);
+    console.log(`Running Command: ${command}`);
+
     const parts = command.split(" ");
     const p = proc.spawn(parts[0], parts.slice(1), {
       shell: true,
