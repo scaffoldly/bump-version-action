@@ -306,7 +306,10 @@ const exec = (org, command) => {
     const parts = command.split(" ");
     const p = proc.spawn(parts[0], parts.slice(1), {
       shell: true,
-      env: { ...process.env, GITHUB_ORGANIZATION: org },
+      env: {
+        ...process.env,
+        TF_VAR_BOOTSTRAP_ORGANIZATION: org,
+      },
     });
 
     p.on("error", (err) => {
