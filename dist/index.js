@@ -298,13 +298,16 @@ const cleanseExecOutput = (output) => {
   return cleansed;
 };
 
-const exec = (command) => {
+const exec = (org, command) => {
   return new Promise((resolve, reject) => {
     let stdout = "";
     let stderr = "";
 
     const parts = command.split(" ");
-    const p = proc.spawn(parts[0], parts.slice(1), { shell: true });
+    const p = proc.spawn(parts[0], parts.slice(1), {
+      shell: true,
+      env: { ...process.env, GITHUB_ORGANIZATION: org },
+    });
 
     p.on("error", (err) => {
       reject(err);
@@ -341,9 +344,9 @@ const terraformInit = async (organization) => {
   await exec(command);
 };
 
-const terraformPlan = async (planfile) => {
+const terraformPlan = async (organization, planfile) => {
   const command = `terraform plan -no-color -out ${planfile}`;
-  const { stdout: plan } = await exec(command);
+  const { stdout: plan } = await exec(organization, command);
   //TODO Encrypt
   return { plan, planfile };
 };
@@ -355,7 +358,7 @@ const terraformApply = async (org, repo, planfile) => {
   let output;
   try {
     const command = `terraform apply -no-color ${planfile}`;
-    const { stdout } = await exec(command);
+    const { stdout } = await exec(org, command);
     output = stdout;
   } catch (e) {
     console.log(
@@ -426,7 +429,10 @@ const run = async () => {
     case "plan": {
       // TODO: lint planfile (terraform show -json planfile)
       const { version } = await prerelease();
-      const { plan, planfile } = await terraformPlan("./planfile");
+      const { plan, planfile } = await terraformPlan(
+        organization,
+        "./planfile"
+      );
       await draftRelease(organization, repo, version, plan, {
         planfile,
       });
