@@ -309,6 +309,7 @@ const exec = (org, command) => {
 
     const env = {
       ...process.env,
+      GITHUB_ORGANIZATION: org,
       TF_VAR_BOOTSTRAP_ORGANIZATION: org,
     };
 
