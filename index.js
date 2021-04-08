@@ -446,6 +446,7 @@ const run = async () => {
       const command = core.getInput("command", { required: true });
       console.log(`Running shell command: ${command}`);
       await exec(organization, command);
+      break;
     }
 
     default:
