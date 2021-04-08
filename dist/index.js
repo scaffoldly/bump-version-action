@@ -49,7 +49,11 @@ const repoInfo = async () => {
     throw new Error(`Unable to extract repo from ${pathname}`);
   }
 
-  return { organization, repo, sha };
+  const info = { organization, repo, sha };
+
+  console.log("Repo Info: ", JSON.stringify(info, null, 2));
+
+  return info;
 };
 
 const slyVersionFetch = () => {
