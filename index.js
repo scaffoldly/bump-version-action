@@ -442,6 +442,12 @@ const run = async () => {
       break;
     }
 
+    case "sh": {
+      const command = core.getInput("command", { required: true });
+      console.log(`Running shell command: ${command}`);
+      await exec(org, command);
+    }
+
     default:
       throw new Error(`Unknown action: ${action}`);
   }
