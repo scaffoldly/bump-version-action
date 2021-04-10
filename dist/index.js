@@ -376,7 +376,6 @@ const terraformApply = async (org, repo, planfile) => {
 
   let version = semver.parse(semver.inc(slyVersionFetch(), "patch"));
 
-  //TODO Decrypt
   let output;
   try {
     const command = `terraform apply -no-color plan`;
