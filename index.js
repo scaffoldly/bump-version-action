@@ -363,7 +363,8 @@ const terraformPlan = async (organization, planfile) => {
 };
 
 const terraformApply = async (org, repo, planfile) => {
-  const decryptCommand = `gpg --batch -d --passphrase "$BOOTSTRAP_GITHUB_TOKEN" -o ./plan ${planfile}`;
+  const terraformCloudToken = core.getInput("terraform-cloud-token");
+  const decryptCommand = `gpg --batch -d --passphrase "${terraformCloudToken}" -o ./plan ${planfile}`;
   await exec(org, decryptCommand);
 
   let version = semver.parse(semver.inc(slyVersionFetch(), "patch"));
