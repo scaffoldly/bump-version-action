@@ -363,17 +363,22 @@ const terraformInit = async (organization) => {
 const terraformPlan = async (organization, planfile) => {
   const command = `terraform plan -no-color -out ${planfile}`;
   const { stdout: plan } = await exec(organization, command);
-  //TODO Encrypt
-  return { plan, planfile };
+  const terraformCloudToken = core.getInput("terraform-cloud-token");
+  const encryptCommand = `gpg --batch -c --passphrase "${terraformCloudToken}" planfile`;
+  await exec(organization, encryptCommand);
+  return { plan, planfile: "./planfile.gpg" };
 };
 
 const terraformApply = async (org, repo, planfile) => {
+  const decryptCommand = `gpg --batch -d --passphrase "$BOOTSTRAP_GITHUB_TOKEN" -o ./plan ${planfile}`;
+  await exec(org, decryptCommand);
+
   let version = semver.parse(semver.inc(slyVersionFetch(), "patch"));
 
   //TODO Decrypt
   let output;
   try {
-    const command = `terraform apply -no-color ${planfile}`;
+    const command = `terraform apply -no-color plan`;
     const { stdout } = await exec(org, command);
     output = stdout;
   } catch (e) {
@@ -404,31 +409,6 @@ ${output}
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
 
   return { apply: output, version };
-};
-
-const encrypt = async (text) => {
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-  const message = openpgp.Message.fromText(stream);
-  const stream = await openpgp.encrypt({
-    message,
-    passwords: [terraformCloudToken],
-  });
-  const encrypted = await openpgp.stream.readToEnd(stream);
-
-  return encrypted;
-};
-
-const decrypt = async (text) => {
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-
-  const message = await openpgp.readMessage({ armoredMessage: text });
-  const { data: decrypted } = await openpgp.decrypt({
-    message,
-    passwords: [terraformCloudToken],
-    format: "binary",
-  });
-
-  return decrypted;
 };
 
 const run = async () => {
