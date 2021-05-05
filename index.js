@@ -89,7 +89,10 @@ const postrelease = async (org, repo, sha) => {
   await simpleGit.default().checkout(defaultBranch);
 
   const version = versionFetch(versionFile);
+  console.log("Current version", version.version);
+
   const newVersion = semver.parse(semver.inc(version, "patch"));
+  console.log("New version", version.version);
 
   versionSet(versionFile, newVersion.version);
 
