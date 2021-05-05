@@ -129,6 +129,8 @@ const draftRelease = async (org, repo, version) => {
     fromTag = (await simpleGit.default().log()).all.slice(-1)[0].hash;
   }
 
+  console.log("!!! fromTag:", fromTag);
+
   const { all: logs } = await simpleGit
     .default()
     .log({ from: fromTag, to: version.version });
