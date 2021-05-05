@@ -59,8 +59,12 @@ const prerelease = async () => {
   const versionFile = core.getInput("version-file", { required: true });
   const version = versionFetch(versionFile);
 
+  console.log("Current version:", version.version);
+
   const newVersion = semver.parse(semver.inc(version, "prerelease"));
-  versionSet(versionFile, version.version);
+  versionSet(versionFile, newVersion.version);
+
+  console.log("New version:", newVersion.version);
 
   const title = `CI: Prerelease: ${newVersion.version}`;
 
