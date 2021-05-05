@@ -66,14 +66,12 @@ const prerelease = async () => {
   const tag = await simpleGit.default().addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
-  // TODO: repo-token
   await simpleGit.default().push(["--follow-tags"]);
   await simpleGit.default().pushTags();
-
   return { version: newVersion };
 };
 
-const postrelease = async (org, repo) => {
+const postrelease = async (org, repo, sha) => {
   const versionFile = core.getInput("version-file", { required: true });
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
@@ -98,6 +96,12 @@ const postrelease = async (org, repo) => {
   );
 
   await simpleGit.default().push();
+
+  await simpleGit.default().checkout(sha);
+  const tag = await simpleGit.default().addTag(newVersion.version);
+  console.log(`Created new tag: ${tag.name}`);
+
+  await simpleGit.default().pushTags();
 
   return { version: newVersion };
 };
@@ -177,7 +181,7 @@ const run = async () => {
 
     case "postrelease": {
       // Naively bumping version, but this is probably good...
-      await postrelease(organization, repo);
+      await postrelease(organization, repo, sha);
       break;
     }
 
