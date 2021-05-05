@@ -61,7 +61,9 @@ const prerelease = async () => {
 
   console.log("Current version:", version.version);
 
-  const newVersion = semver.parse(semver.inc(version, "prerelease"));
+  const newVersion = semver.parse(
+    semver.inc(semver.parse(version.version), "prerelease")
+  );
   versionSet(versionFile, newVersion.version);
 
   console.log("New version:", newVersion.version);
@@ -98,8 +100,10 @@ const postrelease = async (org, repo, sha) => {
   const version = versionFetch(versionFile);
   console.log("Current version", version.version);
 
-  const newVersion = semver.parse(semver.inc(version, "patch"));
-  console.log("New version", version.version);
+  const newVersion = semver.parse(
+    semver.inc(semver.parse(version.version), "patch")
+  );
+  console.log("New version", newVersion.version);
 
   versionSet(versionFile, newVersion.version);
 
