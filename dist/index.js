@@ -115,7 +115,7 @@ const draftRelease = async (org, repo, version, sha) => {
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
 
-  await simpleGit.default().fetch({ unshallow: true });
+  await simpleGit.default().fetch(["--unshallow"]);
 
   let fromTag;
   try {
