@@ -108,17 +108,22 @@ const draftRelease = async (org, repo, version) => {
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
 
-  const latestRelease = await octokit.repos.getLatestRelease({
-    owner: org,
-    repo,
-  });
-  // TODO: Maybe have to loop to find the last non-draft, non-prerelease release
-  console.log("!!! latest release is", JSON.stringify(latestRelease));
-  const { tag_name: tag } = latestRelease.data;
+  let fromTag;
+  try {
+    const latestRelease = await octokit.repos.getLatestRelease({
+      owner: org,
+      repo,
+    });
+    // TODO: Maybe have to loop to find the last non-draft, non-prerelease release
+    console.log("!!! latest release is", JSON.stringify(latestRelease));
+    fromTag = latestRelease.data.tag_name;
+  } catch (e) {
+    console.warn("Unable to find latest release", e.message);
+  }
 
   const { all: logs } = await simpleGit
     .default()
-    .log({ from: tag, to: version.version });
+    .log({ from: fromTag, to: version.version });
 
   console.log("!!! logs are", JSON.stringify(logs));
 
