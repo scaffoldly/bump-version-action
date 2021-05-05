@@ -64,6 +64,8 @@ const prerelease = async () => {
 
   const title = `CI: Prerelease: ${newVersion.version}`;
 
+  await simpleGit.default().add(["."]);
+
   const versionCommit = await simpleGit.default().commit(title);
   console.log(
     `Committed new version: ${newVersion.version}`,
