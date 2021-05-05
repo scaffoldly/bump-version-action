@@ -111,9 +111,11 @@ const postrelease = async (org, repo) => {
 
 // TODO: Handle PR
 // TODO: Glob Up Commit Messages since last release
-const draftRelease = async (org, repo, version) => {
+const draftRelease = async (org, repo, version, sha) => {
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
+
+  await simpleGit.default().fetch({ unshallow: true });
 
   let fromTag;
   try {
@@ -126,14 +128,15 @@ const draftRelease = async (org, repo, version) => {
     fromTag = latestRelease.data.tag_name;
   } catch (e) {
     console.warn("Unable to find latest release:", e.message);
-    fromTag = (await simpleGit.default().log()).all[0].hash;
+    fromTag = (await simpleGit.default().log()).all.slice(-1)[0].hash;
   }
 
   console.log("!!! fromTag:", fromTag);
+  console.log("!!! sha:", sha);
 
   const { all: logs } = await simpleGit
     .default()
-    .log({ from: fromTag, to: version.version });
+    .log({ from: fromTag, to: sha });
 
   console.log("!!! logs are", JSON.stringify(logs));
 
@@ -175,14 +178,14 @@ const run = async () => {
     .default()
     .addConfig("user.email", "github-action@users.noreply.github.com");
 
-  const { organization, repo } = await repoInfo();
+  const { organization, repo, sha } = await repoInfo();
 
   const action = core.getInput("action", { required: true });
 
   switch (action) {
     case "prerelease": {
       const { version } = await prerelease();
-      await draftRelease(organization, repo, version);
+      await draftRelease(organization, repo, version, sha);
       break;
     }
 
