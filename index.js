@@ -45,7 +45,7 @@ const versionFetch = (versionFile) => {
 const versionSet = (versionFile, version) => {
   const json = JSON.parse(fs.readFileSync(versionFile));
   json.version = version;
-  fs.writeFileSync(versionFile, JSON.stringify(slyFile, null, 2));
+  fs.writeFileSync(versionFile, JSON.stringify(json, null, 2));
 };
 
 const prerelease = async () => {
