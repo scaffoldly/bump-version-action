@@ -1,23 +1,10 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 const simpleGit = require("simple-git");
-const axios = require("axios");
-const proc = require("child_process");
-const openpgp = require("openpgp");
 const fs = require("fs");
 const semver = require("semver");
-const immutable = require("immutable");
-const { Readable } = require("stream");
-
-const SLY_FILE = "./sly.json";
 
 const repoInfo = async () => {
-  const rootEmail = core.getInput("root-email");
-  await simpleGit
-    .default()
-    .addConfig("user.name", "Scaffoldly Bootstrap Action");
-  await simpleGit.default().addConfig("user.email", rootEmail);
-
   const log = await simpleGit.default().log({ maxCount: 1 });
   const sha = log.latest.hash;
 
@@ -49,28 +36,28 @@ const repoInfo = async () => {
   return info;
 };
 
-const slyVersionFetch = () => {
-  const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
-  const version = semver.parse(slyFile.version);
+const versionFetch = (versionFile) => {
+  const json = JSON.parse(fs.readFileSync(versionFile));
+  const version = semver.parse(json.version);
   return version;
 };
 
-const slyVersionSet = (version) => {
-  const slyFile = JSON.parse(fs.readFileSync(SLY_FILE));
-  slyFile.version = version;
-  fs.writeFileSync(SLY_FILE, JSON.stringify(slyFile));
+const versionSet = (versionFile, version) => {
+  const json = JSON.parse(fs.readFileSync(versionFile));
+  json.version = version;
+  fs.writeFileSync(versionFile, JSON.stringify(slyFile, null, 2));
 };
 
 const prerelease = async () => {
-  const version = slyVersionFetch();
+  const versionFile = core.getInput("version-file", { required: true });
+  const version = versionFetch(versionFile);
 
   const newVersion = semver.parse(semver.inc(version, "prerelease"));
-
-  slyVersionSet(version.version);
+  versionSet(versionFile, version.version);
 
   const title = `CI: Prerelease: ${newVersion.version}`;
 
-  const versionCommit = await simpleGit.default().commit(title, SLY_FILE);
+  const versionCommit = await simpleGit.default().commit(title, versionFile);
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(versionCommit)
@@ -79,6 +66,7 @@ const prerelease = async () => {
   const tag = await simpleGit.default().addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
+  // TODO: repo-token
   await simpleGit.default().push(["--follow-tags"]);
   await simpleGit.default().pushTags();
 
@@ -86,6 +74,7 @@ const prerelease = async () => {
 };
 
 const postrelease = async (org, repo) => {
+  const versionFile = core.getInput("version-file", { required: true });
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
 
@@ -95,14 +84,14 @@ const postrelease = async (org, repo) => {
   await simpleGit.default().fetch();
   await simpleGit.default().checkout(defaultBranch);
 
-  const version = slyVersionFetch();
+  const version = versionFetch(versionFile);
   const newVersion = semver.parse(semver.inc(version, "patch"));
 
-  slyVersionSet(newVersion.version);
+  versionSet(versionFile, newVersion.version);
 
   const title = `CI: Postrelease: ${newVersion.version}`;
 
-  const commit = await simpleGit.default().commit(title, SLY_FILE);
+  const commit = await simpleGit.default().commit(title, versionFile);
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(commit)
@@ -113,12 +102,25 @@ const postrelease = async (org, repo) => {
   return { version: newVersion };
 };
 
-// TODO: Handle PR -- Plan only as PR Comment
-// TODO: Skip if commit message is "Initial Whatever" (from repo template)
+// TODO: Handle PR
 // TODO: Glob Up Commit Messages since last release
-const draftRelease = async (org, repo, version, plan, files) => {
+const draftRelease = async (org, repo, version) => {
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
+
+  const latestRelease = await octokit.repos.getLatestRelease({
+    owner: org,
+    repo,
+  });
+  // TODO: Maybe have to loop to find the last non-draft, non-prerelease release
+  console.log("!!! latest release is", JSON.stringify(latestRelease));
+  const { tag_name: tag } = latestRelease.data;
+
+  const { all: logs } = await simpleGit
+    .default()
+    .log({ from: tag, to: version.version });
+
+  console.log("!!! logs are", JSON.stringify(logs));
 
   const release = await octokit.repos.createRelease({
     owner: org,
@@ -127,321 +129,51 @@ const draftRelease = async (org, repo, version, plan, files) => {
     tag_name: version.version,
     draft: true,
     body: `
-The following plan was created for ${version.version}:
+# Release ${version.version}:
 
-\`\`\`
-${plan}
-\`\`\`
+Last released version: \`${tag}\`
+
+## Changes since last release:
+${logs.map((log) => {
+  return `
+
+<details>
+  <summary>${log.hash.slice(0, 7)}: ${log.message}</summary>
+
+  *By:* [${log.author_name}](mailto:${log.author_email})
+
+  ${log.body}
+
+</details>
+
+`;
+})}
 `,
   });
 
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
-
-  const assetUploadPromises = Object.entries(files).map(
-    async ([filename, path]) => {
-      const asset = await octokit.repos.uploadReleaseAsset({
-        owner: org,
-        repo,
-        release_id: release.data.id,
-        name: filename,
-        data: fs.readFileSync(path),
-      });
-
-      console.log(
-        `Uploaded planfile to release ${release.data.name}: ${asset.data.url}`
-      );
-    }
-  );
-
-  await Promise.all(assetUploadPromises);
-};
-
-const fetchRelease = async (org, repo) => {
-  const version = slyVersionFetch();
-  if (version.prerelease.length === 0) {
-    throw new Error(
-      `Unable to apply, version not a prerelease: ${version.version}`
-    );
-  }
-
-  const repoToken = core.getInput("repo-token");
-  const octokit = github.getOctokit(repoToken);
-
-  const release = await octokit.repos.getReleaseByTag({
-    owner: org,
-    repo,
-    tag: version.version,
-  });
-  if (!release || !release.data || !release.data.id) {
-    throw new Error(`Unable to find a release for tag: ${version.version}`);
-  }
-
-  console.log(
-    `Found release ID ${release.data.id} for version ${version.version}`
-  );
-
-  const releaseAssets = await octokit.repos.listReleaseAssets({
-    owner: org,
-    repo,
-    release_id: release.data.id,
-  });
-  console.log(`Found ${releaseAssets.data.length} release assets`);
-  const assetPromises = releaseAssets.data.map(async (releaseAsset) => {
-    const { url } = await octokit.repos.getReleaseAsset({
-      owner: org,
-      repo,
-      asset_id: releaseAsset.id,
-      headers: { accept: "application/octet-stream" },
-    });
-    console.log(
-      `Downloading release asset: ${releaseAsset.name} from url ${url}`
-    );
-    const { data } = await axios.default.get(url, {
-      responseType: "arraybuffer",
-      responseEncoding: "binary",
-    });
-
-    const path = `./${releaseAsset.name}`;
-    fs.writeFileSync(path, data);
-
-    return { [releaseAsset.name]: path };
-  });
-  const assets = await Promise.all(assetPromises);
-
-  return {
-    releaseId: release.data.id,
-    version,
-    files: immutable.merge({}, ...assets),
-  };
-};
-
-const terraformPost = async (url, payload) => {
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-
-  try {
-    const { status, data } = await axios.default.post(url, payload, {
-      headers: {
-        Authorization: `Bearer ${terraformCloudToken}`,
-        "Content-Type": "application/vnd.api+json",
-      },
-    });
-
-    return { status, data };
-  } catch (e) {
-    // ignore this type of response so our org/workspace creation is idempotent
-    // {"errors":[{"status":"422","title":"invalid attribute","detail":"Name has already been taken","source":{"pointer":"/data/attributes/name"}}]}
-    if (
-      !e.response ||
-      e.response.status !== 422 ||
-      !e.response.data ||
-      !e.response.data.errors ||
-      e.response.data.errors.length !== 1 ||
-      !e.response.data.errors[0] ||
-      !e.response.data.errors[0].source ||
-      !e.response.data.errors[0].source.pointer ||
-      e.response.data.errors[0].source.pointer !== "/data/attributes/name"
-    ) {
-      console.error("Error posting to Terraform Cloud", e.message);
-      throw e;
-    }
-
-    const { status, data } = e.response;
-
-    return { status, data };
-  }
-};
-
-const createTerraformOrganization = async (organization) => {
-  const rootEmail = core.getInput("root-email");
-
-  const { status, data } = await terraformPost(
-    "https://app.terraform.io/api/v2/organizations",
-    {
-      data: {
-        type: "organizations",
-        attributes: {
-          name: organization,
-          email: rootEmail,
-        },
-      },
-    }
-  );
-
-  console.log(`[${status}] Create Org Response: ${JSON.stringify(data)}`);
-};
-
-const createTerraformWorkspace = async (organization, workspace) => {
-  const { status, data } = await terraformPost(
-    `https://app.terraform.io/api/v2/organizations/${organization}/workspaces`,
-    {
-      data: {
-        type: "workspaces",
-        attributes: {
-          name: workspace,
-          operations: false,
-        },
-      },
-    }
-  );
-
-  console.log(`[${status}] Create Workspace Response: ${JSON.stringify(data)}`);
-};
-
-const cleanseExecOutput = (output) => {
-  let cleansed = output;
-  // Remove GitHub enrichment of output
-  cleansed = cleansed.replace(/^::debug::.*\n?/gm, "");
-  cleansed = cleansed.replace(/^::set-output.*\n?/gm, "");
-  return cleansed;
-};
-
-const exec = (org, command) => {
-  return new Promise((resolve, reject) => {
-    let stdout = "";
-    let stderr = "";
-
-    const env = {
-      ...process.env,
-      GITHUB_ORGANIZATION: org,
-      TF_VAR_BOOTSTRAP_ORGANIZATION: org,
-    };
-
-    console.log(`Using Env: ${JSON.stringify(env)}`);
-    console.log(`Running Command: ${command}`);
-
-    const parts = command.split(" ");
-    const p = proc.spawn(parts[0], parts.slice(1), {
-      shell: true,
-      env: {
-        ...process.env,
-        TF_VAR_BOOTSTRAP_ORGANIZATION: org,
-      },
-    });
-
-    p.on("error", (err) => {
-      reject(err);
-    });
-
-    p.on("exit", (code, signal) => {
-      if (code === 0) {
-        resolve({
-          stdout: cleanseExecOutput(stdout),
-          stderr: cleanseExecOutput(stderr),
-        });
-        return;
-      }
-      reject(new Error(`Command '${command}' exited with code ${code}`));
-    });
-
-    p.stdout.pipe(process.stdout);
-    p.stderr.pipe(process.stdout); // Pipe stderr to stdout too
-
-    p.stdout.on("data", (chunk) => {
-      stdout = `${stdout}${chunk}`;
-    });
-    p.stderr.on("data", (chunk) => {
-      stderr = `${stderr}${chunk}`;
-    });
-  });
-};
-
-const terraformInit = async (organization) => {
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-
-  const command = `terraform init -backend-config="hostname=app.terraform.io" -backend-config="organization=${organization}" -backend-config="token=${terraformCloudToken}"`;
-
-  await exec(organization, command);
-};
-
-const terraformPlan = async (organization, planfile) => {
-  const command = `terraform plan -no-color -out ${planfile}`;
-  const { stdout: plan } = await exec(organization, command);
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-  const encryptCommand = `gpg --batch -c --passphrase "${terraformCloudToken}" planfile`;
-  await exec(organization, encryptCommand);
-  return { plan, planfile: "./planfile.gpg" };
-};
-
-const terraformApply = async (org, repo, planfile) => {
-  const terraformCloudToken = core.getInput("terraform-cloud-token");
-  const decryptCommand = `gpg --batch -d --passphrase "${terraformCloudToken}" -o ./plan ${planfile}`;
-  await exec(org, decryptCommand);
-
-  let version = semver.parse(semver.inc(slyVersionFetch(), "patch"));
-
-  let output;
-  try {
-    const command = `terraform apply -no-color plan`;
-    const { stdout } = await exec(org, command);
-    output = stdout;
-  } catch (e) {
-    console.log(
-      "Error while applying, setting the action as failed, but continuing for housecleaning..."
-    );
-    core.setFailed(e);
-    output = e.message;
-  }
-
-  const repoToken = core.getInput("repo-token");
-  const octokit = github.getOctokit(repoToken);
-
-  const release = await octokit.repos.createRelease({
-    owner: org,
-    repo,
-    name: version.version,
-    tag_name: version.version,
-    body: `
-The following was applied for ${version.version}:
-
-\`\`\`
-${output}
-\`\`\`
-`,
-  });
-
-  console.log(`Created release: ${release.data.name}: ${release.data.url}`);
-
-  return { apply: output, version };
 };
 
 const run = async () => {
+  await simpleGit.default().addConfig("user.name", "GitHub Action");
+  await simpleGit
+    .default()
+    .addConfig("user.email", "github-action@users.noreply.github.com");
+
   const { organization, repo } = await repoInfo();
-  core.setOutput("organization", organization);
 
-  await createTerraformOrganization(organization);
-  await createTerraformWorkspace(organization, repo);
-  await terraformInit(organization);
-
-  const action = core.getInput("action");
+  const action = core.getInput("action", { required: true });
 
   switch (action) {
-    case "plan": {
-      // TODO: lint planfile (terraform show -json planfile)
+    case "prerelease": {
       const { version } = await prerelease();
-      const { plan, planfile } = await terraformPlan(
-        organization,
-        "./planfile"
-      );
-      await draftRelease(organization, repo, version, plan, {
-        planfile,
-      });
+      await draftRelease(organization, repo, version);
       break;
     }
 
-    case "apply": {
-      const { files, version } = await fetchRelease(organization, repo);
-      if (!files || files.length === 0) {
-        throw new Error(`No release assets on version ${version}`);
-      }
-      await terraformApply(organization, repo, files["planfile"]);
+    case "postrelease": {
+      // Naively bumping version, but this is probably good...
       await postrelease(organization, repo);
-      break;
-    }
-
-    case "sh": {
-      const command = core.getInput("command", { required: true });
-      console.log(`Running shell command: ${command}`);
-      await exec(organization, command);
       break;
     }
 
