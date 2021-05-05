@@ -126,7 +126,7 @@ const draftRelease = async (org, repo, version) => {
     fromTag = latestRelease.data.tag_name;
   } catch (e) {
     console.warn("Unable to find latest release:", e.message);
-    fromTag = (await simpleGit.default().log()).all.slice(-1)[0].hash;
+    fromTag = (await simpleGit.default().log()).all[0].hash;
   }
 
   console.log("!!! fromTag:", fromTag);
