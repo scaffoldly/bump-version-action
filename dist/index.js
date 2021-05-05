@@ -93,9 +93,11 @@ const postrelease = async (org, repo, sha) => {
 
   await simpleGit.default().fetch();
   await simpleGit.default().checkout(sha);
-  const tag = await simpleGit
-    .default()
-    .addTag(semver.inc(versionFetch(versionFile)));
+  const tagVersion = versionFetch(versionFile);
+  const newTagVersion = semver.parse(
+    semver.inc(semver.parse(tagVersion.version), "patch")
+  );
+  const tag = await simpleGit.default().addTag(newTagVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
   const info = await octokit.repos.get({ owner: org, repo });
