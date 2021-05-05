@@ -119,6 +119,7 @@ const draftRelease = async (org, repo, version) => {
     fromTag = latestRelease.data.tag_name;
   } catch (e) {
     console.warn("Unable to find latest release:", e.message);
+    fromTag = (await simpleGit.default().log()).all.slice(-1)[0].hash;
   }
 
   const { all: logs } = await simpleGit
@@ -136,23 +137,23 @@ const draftRelease = async (org, repo, version) => {
     body: `
 # Release ${version.version}:
 
-Last released version: \`${fromTag}\`
-
-## Changes since last release:
-${logs.map((log) => {
-  return `
+## Changes:
+${logs
+  .map((log) => {
+    return `
 
 <details>
-  <summary>${log.hash.slice(0, 7)}: ${log.message}</summary>
+  <summary>${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]}</summary>
 
-  *By:* [${log.author_name}](mailto:${log.author_email})
+  ${log.message}${log.body ? `\n\n${log.body}` : ""}
 
-  ${log.body}
+  _By: [${log.author_name}](mailto:${log.author_email})_
 
 </details>
 
 `;
-})}
+  })
+  .join("\n")}
 `,
   });
 
