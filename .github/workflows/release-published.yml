@@ -18,7 +18,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
       - run: yarn
-      - uses: scaffoldly/bump-version-action@master
+      - uses: scaffoldly/bump-version-action@main
         with:
           action: postrelease
           version-file: package.json
