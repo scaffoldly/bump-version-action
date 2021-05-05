@@ -1,43 +1,79 @@
-# bootstrap-action action
+# bump-version action
 
-This action runs all the steps required to run a `terraform plan` or
-`terraform apply` on a Scaffoldly Bootstrap project.
+This action will bump versions, create releases and manage tagging.
 
-## Inputs
+## If `action` is `prerelease`
 
-### `action`
+The following steps are taken:
 
-**Required** The action to run: 'plan' or 'apply'
+- The `version` is parsed from `version-file`
+- It `prerelease` (`-#`) version (`X.Y.Z-#`) is appended or incremented using `semver`
+- The updated version is committed
+- A tag is pushed with the same name as the new version
+- A draft release is created with the same name with a log of history since the last release
 
-### `repo-token`
+## If `action` is `postrelease`
+
+The following steps are taken:
+
+- The `version` is parsed from the `version-file`
+- The Default Branch is checked out
+- The `prerelease` (`-#`) version (`X.Y.Z-#`) is lobbed off using `semver`
+- The updated version is committed
+- A tag is pushed with the same name as the new version
+
+# Inputs
+
+## `action`
+
+**Required** The action to run: 'prerelease' or 'postrelease'
+
+## `version-file`
+
+**Required** The version file to manage, e.g. 'package.json'
+
+## `repo-token`
 
 **Required** [The GitHub token for this repo](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)
 
-### `root-email`
+# Outputs
 
-**Required** [Root Email for your project](https://docs.scaffold.ly/getting-started/prerequisites#root-email)
+This action has no outputs.
 
-### `terraform-cloud-token`
+# Example usage
 
-**Required** [Access Token to Terraform Cloud](https://docs.scaffold.ly/getting-started/prerequisites#terraform-cloud)
-
-## Outputs
-
-### `organization`
-
-The GitHub/Terraform Cloud Organization name
-
-## Example usage
-
-Run a `terraform plan`:
+## Run a `prerelease`
 
 ```yaml
-- uses: actions/checkout@v2
-- uses: hashicorp/setup-terraform@v1
-- uses: scaffoldly/setup-bootstrap@v1
-  with:
-    action: plan
-    repo-token: ${{ secrets.GITHUB_TOKEN }}
-    root-email: ${{ secrets.BOOTSTRAP_ROOT_EMAIL }}
-    terraform-cloud-token: ${{ secrets.BOOTSTRAP_TERRAFORM_TOKEN }}
+on:
+  push:
+    branches: [main]
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: scaffoldly/bump-version-action@main
+        with:
+          action: prerelease
+          version-file: package.json
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+## Run a `postrelease`
+
+```yaml
+on:
+  release:
+    types: [published]
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: scaffoldly/bump-version-action@main
+        with:
+          action: postrelease
+          version-file: package.json
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 ```

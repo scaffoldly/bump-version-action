@@ -64,7 +64,7 @@ const prerelease = async () => {
 
   const title = `CI: Prerelease: ${newVersion.version}`;
 
-  const versionCommit = await simpleGit.default().commit(title, versionFile);
+  const versionCommit = await simpleGit.default().commit(title);
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(versionCommit)
@@ -73,14 +73,12 @@ const prerelease = async () => {
   const tag = await simpleGit.default().addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
-  // TODO: repo-token
   await simpleGit.default().push(["--follow-tags"]);
   await simpleGit.default().pushTags();
-
   return { version: newVersion };
 };
 
-const postrelease = async (org, repo) => {
+const postrelease = async (org, repo, sha) => {
   const versionFile = core.getInput("version-file", { required: true });
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
@@ -106,6 +104,12 @@ const postrelease = async (org, repo) => {
 
   await simpleGit.default().push();
 
+  await simpleGit.default().checkout(sha);
+  const tag = await simpleGit.default().addTag(newVersion.version);
+  console.log(`Created new tag: ${tag.name}`);
+
+  await simpleGit.default().pushTags();
+
   return { version: newVersion };
 };
 
@@ -123,22 +127,15 @@ const draftRelease = async (org, repo, version, sha) => {
       owner: org,
       repo,
     });
-    // TODO: Maybe have to loop to find the last non-draft, non-prerelease release
-    console.log("!!! latest release is", JSON.stringify(latestRelease));
     fromTag = latestRelease.data.tag_name;
   } catch (e) {
     console.warn("Unable to find latest release:", e.message);
     fromTag = (await simpleGit.default().log()).all.slice(-1)[0].hash;
   }
 
-  console.log("!!! fromTag:", fromTag);
-  console.log("!!! sha:", sha);
-
   const { all: logs } = await simpleGit
     .default()
     .log({ from: fromTag, to: sha });
-
-  console.log("!!! logs are", JSON.stringify(logs));
 
   const release = await octokit.repos.createRelease({
     owner: org,
@@ -191,7 +188,7 @@ const run = async () => {
 
     case "postrelease": {
       // Naively bumping version, but this is probably good...
-      await postrelease(organization, repo);
+      await postrelease(organization, repo, sha);
       break;
     }
 
