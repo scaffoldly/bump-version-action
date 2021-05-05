@@ -144,6 +144,8 @@ const postrelease = async (org, repo, sha) => {
   await simpleGit.default().push();
   await simpleGit.default().pushTags();
 
+  versionSet(versionFile, newTagVersion.version);
+
   return { version: newVersion };
 };
 
