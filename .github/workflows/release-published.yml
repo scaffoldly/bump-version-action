@@ -1,16 +1,16 @@
-name: Push to Main
+name: Release Published
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
+  release:
+    types: [published]
 jobs:
-  bump-version:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2-beta
         with:
           node-version: "12"
+          registry-url: "https://registry.npmjs.org"
       - uses: actions/cache@v2
         with:
           path: ./node_modules
@@ -20,6 +20,6 @@ jobs:
       - run: yarn
       - uses: scaffoldly/bump-version-action@master
         with:
-          action: prerelease
+          action: postrelease
           version-file: package.json
           repo-token: ${{ secrets.GITHUB_TOKEN }}
