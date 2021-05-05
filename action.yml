@@ -1,8 +1,8 @@
 name: "Bump Versions, Manage Tags, and Create and Manage Releases"
 description: "GitHub Action to Bump Versions, Manage Tags, and to Create and Manage Releases"
 branding:
-  icon: arrow-up-circle
-  color: blue
+  icon: "arrow-up-circle"
+  color: "blue"
 inputs:
   action:
     description: The release action ('prerelease' or 'postrelease')
