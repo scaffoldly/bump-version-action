@@ -109,6 +109,7 @@ const postrelease = async (org, repo) => {
   return { version: newVersion };
 };
 
+// TODO: Handle PR
 // TODO: Glob Up Commit Messages since last release
 const draftRelease = async (org, repo, version) => {
   const repoToken = core.getInput("repo-token");
