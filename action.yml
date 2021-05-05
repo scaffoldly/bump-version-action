@@ -9,6 +9,7 @@ inputs:
     required: true
   repo-token:
     description: "The GitHub token for this repo. (https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)"
+    required: true
 runs:
   using: "node12"
   main: "dist/index.js"
