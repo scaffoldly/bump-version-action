@@ -125,7 +125,7 @@ const draftRelease = async (org, repo, version) => {
     console.log("!!! latest release is", JSON.stringify(latestRelease));
     fromTag = latestRelease.data.tag_name;
   } catch (e) {
-    console.warn("Unable to find latest release", e.message);
+    console.warn("Unable to find latest release:", e.message);
   }
 
   const { all: logs } = await simpleGit
@@ -143,7 +143,7 @@ const draftRelease = async (org, repo, version) => {
     body: `
 # Release ${version.version}:
 
-Last released version: \`${tag}\`
+Last released version: \`${fromTag}\`
 
 ## Changes since last release:
 ${logs.map((log) => {
