@@ -8,7 +8,7 @@ The following steps are taken:
 
 - The `version` is parsed from `version-file`
 - It `prerelease` (`-#`) version (`X.Y.Z-#`) is appended or incremented using `semver`
-- The updated version is committed
+- The updated version and all modified files are committed (`git add .`)
 - A tag is pushed with the same name as the new version
 - A draft release is created with the same name with a log of history since the last release
 
@@ -21,6 +21,7 @@ The following steps are taken:
 - The `prerelease` (`-#`) version (`X.Y.Z-#`) is lobbed off using `semver`
 - The updated version is committed
 - A tag is pushed with the same name as the new version
+- The name on the existing published release is updated to the new version
 
 # Inputs
 

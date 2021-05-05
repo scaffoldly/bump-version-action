@@ -100,7 +100,6 @@ const postrelease = async (org, repo, sha) => {
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(commit)
   );
-
   await simpleGit.default().push();
 
   await simpleGit.default().checkout(sha);
@@ -108,6 +107,23 @@ const postrelease = async (org, repo, sha) => {
   console.log(`Created new tag: ${tag.name}`);
 
   await simpleGit.default().pushTags();
+
+  const release = await octokit.repos.getReleaseByTag({
+    owner: org,
+    repo,
+    tag: version.version,
+  });
+
+  await octokit.repos.updateRelease({
+    owner: org,
+    repo,
+    release_id: release.data.id,
+    name: newVersion.version,
+  });
+
+  console.log(
+    `Updated release ${release.data.id} on tag ${version.version} with name: ${newVersion.version}`
+  );
 
   return { version: newVersion };
 };
