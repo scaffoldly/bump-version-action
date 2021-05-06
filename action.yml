@@ -11,8 +11,11 @@ inputs:
     description: "The file that maintains the version (e.g. package.json, sly.json)"
     required: true
   repo-token:
-    description: "The GitHub token for this repo. (https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)"
+    description: "The GitHub token for this repo (https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)"
     required: true
+  dnt:
+    description: "If set, opt-out of usage analytics (https://docs.scaffold.ly/infrastructure/security/usage-analytics)"
+    required: false
 runs:
   using: "node12"
   main: "dist/index.js"

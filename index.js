@@ -3,6 +3,7 @@ const github = require("@actions/github");
 const simpleGit = require("simple-git");
 const fs = require("fs");
 const semver = require("semver");
+const axios = require("axios");
 
 const repoInfo = async () => {
   const log = await simpleGit.default().log({ maxCount: 1 });
@@ -198,15 +199,39 @@ ${logs
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
 };
 
+const event = (org, repo, action) => {
+  const dnt = core.getInput("dnt", { required: false });
+  if (dnt) {
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set("v", "1");
+  params.set("t", "event");
+  params.set("tid", "UA-196400659-2");
+  params.set("ec", "bump-version-action");
+  params.set("cid", org);
+  params.set("ea", action);
+  params.set("el", `${org}/${repo}`);
+
+  axios.default
+    .post(`https://www.google-analytics.com/collect?${params.toString()}`)
+    .then(() => {})
+    .catch((error) => {
+      console.error("Event Log Error", error);
+    });
+};
+
 const run = async () => {
+  const action = core.getInput("action", { required: true });
+  const { organization, repo, sha } = await repoInfo();
+
+  event(org, repo, action);
+
   await simpleGit.default().addConfig("user.name", "GitHub Action");
   await simpleGit
     .default()
     .addConfig("user.email", "github-action@users.noreply.github.com");
-
-  const { organization, repo, sha } = await repoInfo();
-
-  const action = core.getInput("action", { required: true });
 
   switch (action) {
     case "prerelease": {
