@@ -226,7 +226,7 @@ const run = async () => {
   const action = core.getInput("action", { required: true });
   const { organization, repo, sha } = await repoInfo();
 
-  event(org, repo, action);
+  event(organization, repo, action);
 
   await simpleGit.default().addConfig("user.name", "GitHub Action");
   await simpleGit
