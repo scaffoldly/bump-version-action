@@ -90,6 +90,8 @@ const prerelease = async () => {
 const postrelease = async (org, repo, sha) => {
   const versionFile = core.getInput("version-file", { required: true });
   const repoToken = core.getInput("repo-token");
+  const majorTag = core.getInput("major-tag");
+
   const octokit = github.getOctokit(repoToken);
 
   await simpleGit.default().fetch();
@@ -100,6 +102,29 @@ const postrelease = async (org, repo, sha) => {
   );
   const tag = await simpleGit.default().addTag(newTagVersion.version);
   console.log(`Created new tag: ${tag.name}`);
+
+  if (majorTag) {
+    try {
+      console.log(
+        `Major Tag Enabled: Attempting delete of existing tag v${newTagVersion.major}`
+      );
+      await simpleGit.default().raw(["tag", "-d", `v${newTagVersion.major}`]);
+    } catch (e) {
+      console.warn(
+        `Error deleting existing tag v${newTagVersion.major}`,
+        e.message
+      );
+    }
+
+    const superTag = await simpleGit
+      .default()
+      .addTag(`v${newTagVersion.major}`);
+    console.log(`Created new super tag: ${superTag.name}`);
+
+    await simpleGit.default().pushTags(["--force"]);
+  } else {
+    await simpleGit.default().pushTags();
+  }
 
   const release = await octokit.repos.getReleaseByTag({
     owner: org,
@@ -143,7 +168,6 @@ const postrelease = async (org, repo, sha) => {
   );
 
   await simpleGit.default().push();
-  await simpleGit.default().pushTags();
 
   versionSet(versionFile, newTagVersion.version);
 

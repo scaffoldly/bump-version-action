@@ -37,6 +37,10 @@ The following steps are taken:
 
 **Required** [The GitHub token for this repo](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)
 
+## `major-tag`
+
+_Optional:_ If set, will create/overwrite a tag representing the major release ('v1'). Only applicable during during postrelease
+
 # Outputs
 
 This action has no outputs.

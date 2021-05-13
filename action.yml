@@ -13,6 +13,9 @@ inputs:
   repo-token:
     description: "The GitHub token for this repo (https://docs.github.com/en/actions/reference/authentication-in-a-workflow#example-passing-github_token-as-an-input)"
     required: true
+  major-tag:
+    description: "If set, will create/overwrite a tag representing the major release ('v1'). Only applicable during during postrelease"
+    required: false
   dnt:
     description: "If set, opt-out of usage analytics (https://docs.scaffold.ly/infrastructure/security/usage-analytics)"
     required: false
