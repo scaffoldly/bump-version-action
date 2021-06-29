@@ -241,8 +241,9 @@ const event = (org, repo, action) => {
       `https://api.segment.io/v1/track`,
       {
         userId: org,
-        context: { script: "bump-version-action", action },
-        traits: { repo },
+        event: action,
+        properties: { script: "bump-version-action" },
+        context: { repo },
       },
       { auth: { username: "RvjEAi2NrzWFz3SL0bNwh5yVwrwWr0GA", password: "" } }
     )
