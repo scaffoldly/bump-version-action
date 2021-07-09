@@ -53,8 +53,6 @@ const prerelease = async () => {
   const versionFile = core.getInput("version-file", { required: true });
   const version = versionFetch(versionFile);
 
-  await simpleGit.default().fetch(["--prune", "--unshallow", "--tags"]);
-
   console.log("Current version:", version.version);
 
   const newVersion = semver.parse(
