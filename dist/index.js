@@ -60,8 +60,6 @@ const prerelease = async () => {
   const versionFile = core.getInput("version-file", { required: true });
   const version = versionFetch(versionFile);
 
-  await simpleGit.default().fetch(["--prune", "--tags"]);
-
   console.log("Current version:", version.version);
 
   const newVersion = semver.parse(
@@ -96,7 +94,7 @@ const postrelease = async (org, repo, sha) => {
 
   const octokit = github.getOctokit(repoToken);
 
-  await simpleGit.default().fetch(["--prune", "--unshallow", "--tags"]);
+  await simpleGit.default().fetch();
   await simpleGit.default().checkout(sha);
   const tagVersion = versionFetch(versionFile);
   const newTagVersion = semver.parse(
