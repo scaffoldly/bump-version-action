@@ -207,9 +207,11 @@ const draftRelease = async (org, repo, version, sha) => {
 ${logs
   .map((log) => {
     return `
- - ${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]} (_[${
+ - ${log.hash.slice(0, 7)}: **${log.message.split("\n")[0]}** (${
       log.author_name
-    }](mailto:${log.author_email})_)
+    }) [_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${
+      log.hash
+    })_]
 `;
   })
   .join("")}
