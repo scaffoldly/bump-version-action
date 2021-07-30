@@ -200,19 +200,13 @@ const draftRelease = async (org, repo, version, sha) => {
     body: `
 # Release ${version.version}:
 
-## Changes:
+## Commits since \`${latestRelease.data.tag_name}\`:
 ${logs
   .map((log) => {
     return `
-
-<details>
-  <summary>${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]}</summary>
-
-  ${log.message}${log.body ? `\n\n${log.body}` : ""}
-
-  _By: [${log.author_name}](mailto:${log.author_email})_
-
-</details>
+:heavy_plus_sign: ${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]} (_[${
+      log.author_name
+    }](mailto:${log.author_email})_)
 
 `;
   })
