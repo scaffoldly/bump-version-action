@@ -200,7 +200,7 @@ const draftRelease = async (org, repo, version, sha) => {
     body: `
 # Release ${version.version}:
 
-## Commits since [\`${fromTag}\`](https://github.com/${org}/${repo}/compare/${fromTag}...${
+## Commits since [${fromTag}](https://github.com/${org}/${repo}/compare/${fromTag}...${
       version.version
     }):
 
