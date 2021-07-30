@@ -207,7 +207,7 @@ const draftRelease = async (org, repo, version, sha) => {
     body: `
 # Release ${version.version}:
 
-## Commits since \`${latestRelease.data.tag_name}\`:
+## Commits since \`${fromTag}\`:
 ${logs
   .map((log) => {
     return `
