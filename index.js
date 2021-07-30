@@ -200,17 +200,13 @@ const draftRelease = async (org, repo, version, sha) => {
     body: `
 # Release ${version.version}:
 
-## Commits since \`${fromTag}\`:
-
-**Compare**: [${
+## [Commits since \`${fromTag}\`]((https://github.com/${org}/${repo}/compare/${fromTag}...${
       version.version
-    }...${fromTag}](https://github.com/${org}/${repo}/compare/${fromTag}...${
-      version.version
-    })
+    })):
 
 ${logs.map((log) => {
   return `
- - ${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]} (_[${
+➡ ${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]} (_[${
     log.author_name
   }](mailto:${log.author_email})_)
 `;
