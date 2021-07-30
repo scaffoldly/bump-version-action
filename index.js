@@ -201,17 +201,20 @@ const draftRelease = async (org, repo, version, sha) => {
 # Release ${version.version}:
 
 ## Commits since \`${fromTag}\`:
-${logs
-  .map((log) => {
-    return `
-:heavy_plus_sign: ${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]} (_[${
-      log.author_name
-    }](mailto:${log.author_email})_)
 
+**Compare**: [${
+      version.version
+    }...${fromTag}](https://github.com/${org}/${repo}/compare/${fromTag}...${
+      version.version
+    })
+
+${logs.map((log) => {
+  return `
+ - ${log.hash.slice(0, 7)}: ${log.message.split("\n")[0]} (_[${
+    log.author_name
+  }](mailto:${log.author_email})_)
 `;
-  })
-  .join("\n")}
-`,
+})}`,
   });
 
   console.log(`Created release: ${release.data.name}: ${release.data.url}`);
