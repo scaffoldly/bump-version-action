@@ -198,6 +198,29 @@ const draftRelease = async (org, repo, version, sha) => {
     .default()
     .log({ from: fromTag, to: sha });
 
+  let body = logs
+    .map((log) => {
+      return `
+ - ${log.hash.slice(0, 7)}: **${log.message.split("\n")[0]}** (${
+        log.author_name
+      }) [_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${
+        log.hash
+      })_]`;
+    })
+    .join("\n");
+
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping compare links from release body...");
+    body = logs
+      .map((log) => {
+        return `
+ - ${log.hash.slice(0, 7)}: **${log.message.split("\n")[0]}** (${
+          log.author_name
+        })`;
+      })
+      .join("\n");
+  }
+
   const release = await octokit.repos.createRelease({
     owner: org,
     repo,
@@ -207,21 +230,9 @@ const draftRelease = async (org, repo, version, sha) => {
     body: `
 # Release ${version.version}:
 
-## Commits since [${fromTag}](https://github.com/${org}/${repo}/compare/${fromTag}...${
-      version.version
-    }):
+## Commits since [${fromTag}](https://github.com/${org}/${repo}/compare/${fromTag}...${version.version}):
 
-${logs
-  .map((log) => {
-    return `
- - ${log.hash.slice(0, 7)}: **${log.message.split("\n")[0]}** (${
-      log.author_name
-    }) [_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${
-      log.hash
-    })_]
-`;
-  })
-  .join("")}
+${body}
 `,
   });
 
