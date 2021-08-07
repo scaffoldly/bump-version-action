@@ -174,6 +174,24 @@ const postrelease = async (org, repo, sha) => {
   return { version: newVersion };
 };
 
+const createLogMessages = (
+  logs,
+  options = { links: true, messages: true, authors: true }
+) => {
+  const body = logs
+    .map((log) => {
+      return `
+ - ${log.hash.slice(0, 7)}: ${
+        messages ? `**${log.message.split("\n")[0]}** ` : ""
+      }${authors ? `(${log.author_name}) ` : ""}${
+        links
+          ? `[_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${log.hash})_] `
+          : ``
+      }`;
+    })
+    .join("\n");
+};
+
 // TODO: Handle PR
 // TODO: Glob Up Commit Messages since last release
 const draftRelease = async (org, repo, version, sha) => {
@@ -198,27 +216,33 @@ const draftRelease = async (org, repo, version, sha) => {
     .default()
     .log({ from: fromTag, to: sha });
 
-  let body = logs
-    .map((log) => {
-      return `
- - ${log.hash.slice(0, 7)}: **${log.message.split("\n")[0]}** (${
-        log.author_name
-      }) [_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${
-        log.hash
-      })_]`;
-    })
-    .join("\n");
+  let body = createLogMessages(logs);
 
   if (body.length >= 20000) {
     console.warn("Body is long. Skipping compare links from release body...");
-    body = logs
-      .map((log) => {
-        return `
- - ${log.hash.slice(0, 7)}: **${log.message.split("\n")[0]}** (${
-          log.author_name
-        })`;
-      })
-      .join("\n");
+    body = createLogMessages(logs, {
+      links: false,
+      authors: true,
+      messages: true,
+    });
+  }
+
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping log messages...");
+    body = createLogMessages(logs, {
+      links: false,
+      authors: true,
+      messages: false,
+    });
+  }
+
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping log messages...");
+    body = createLogMessages(logs, {
+      links: false,
+      authors: false,
+      messages: false,
+    });
   }
 
   const release = await octokit.repos.createRelease({
