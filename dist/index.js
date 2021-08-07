@@ -176,6 +176,9 @@ const postrelease = async (org, repo, sha) => {
 
 const createLogMessages = (
   logs,
+  org,
+  repo,
+  fromTag,
   options = { links: true, messages: true, authors: true }
 ) => {
   const body = logs
@@ -220,7 +223,7 @@ const draftRelease = async (org, repo, version, sha) => {
 
   if (body.length >= 20000) {
     console.warn("Body is long. Skipping compare links from release body...");
-    body = createLogMessages(logs, {
+    body = createLogMessages(logs, org, repo, fromTag, {
       links: false,
       authors: true,
       messages: true,
@@ -229,7 +232,7 @@ const draftRelease = async (org, repo, version, sha) => {
 
   if (body.length >= 20000) {
     console.warn("Body is long. Skipping log messages...");
-    body = createLogMessages(logs, {
+    body = createLogMessages(logs, org, repo, fromTag, {
       links: false,
       authors: true,
       messages: false,
@@ -238,7 +241,7 @@ const draftRelease = async (org, repo, version, sha) => {
 
   if (body.length >= 20000) {
     console.warn("Body is long. Skipping log messages...");
-    body = createLogMessages(logs, {
+    body = createLogMessages(logs, org, repo, fromTag, {
       links: false,
       authors: false,
       messages: false,
