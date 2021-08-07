@@ -181,7 +181,7 @@ const createLogMessages = (
   fromTag,
   options = { links: true, messages: true, authors: true }
 ) => {
-  const body = logs
+  return logs
     .map((log) => {
       return `
  - ${log.hash.slice(0, 7)}: ${
