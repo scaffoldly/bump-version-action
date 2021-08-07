@@ -175,9 +175,9 @@ const createLogMessages = (
     .map((log) => {
       return `
  - ${log.hash.slice(0, 7)}: ${
-        messages ? `**${log.message.split("\n")[0]}** ` : ""
-      }${authors ? `(${log.author_name}) ` : ""}${
-        links
+        options.messages ? `**${log.message.split("\n")[0]}** ` : ""
+      }${options.authors ? `(${log.author_name}) ` : ""}${
+        options.links
           ? `[_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${log.hash})_] `
           : ``
       }`;

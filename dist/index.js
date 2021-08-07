@@ -182,9 +182,9 @@ const createLogMessages = (
     .map((log) => {
       return `
  - ${log.hash.slice(0, 7)}: ${
-        messages ? `**${log.message.split("\n")[0]}** ` : ""
-      }${authors ? `(${log.author_name}) ` : ""}${
-        links
+        options.messages ? `**${log.message.split("\n")[0]}** ` : ""
+      }${options.authors ? `(${log.author_name}) ` : ""}${
+        options.links
           ? `[_[compare](https://github.com/${org}/${repo}/compare/${fromTag}...${log.hash})_] `
           : ``
       }`;
@@ -243,16 +243,6 @@ const draftRelease = async (org, repo, version, sha) => {
       authors: false,
       messages: false,
     });
-  }
-
-  if (body.length >= 20000) {
-    console.warn("Body is long. Skipping log messages...");
-    body = logs
-      .map((log) => {
-        return `
- - ${log.hash.slice(0, 7)} (${log.author_name})`;
-      })
-      .join("\n");
   }
 
   const release = await octokit.repos.createRelease({
