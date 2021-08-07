@@ -245,6 +245,16 @@ const draftRelease = async (org, repo, version, sha) => {
     });
   }
 
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping log messages...");
+    body = logs
+      .map((log) => {
+        return `
+ - ${log.hash.slice(0, 7)} (${log.author_name})`;
+      })
+      .join("\n");
+  }
+
   const release = await octokit.repos.createRelease({
     owner: org,
     repo,
