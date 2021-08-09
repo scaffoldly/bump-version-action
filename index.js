@@ -104,6 +104,11 @@ const prerelease = async (org, repo) => {
     await gitClient.getRemotes(true)
   );
 
+  (await gitClient.getRemotes(true)).forEach((remote) => {
+    const url = new URL(remote.refs.push);
+    console.log("URL username substring", url.username.slice(-4));
+  });
+
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
   const info = await octokit.repos.get({ owner: org, repo });
