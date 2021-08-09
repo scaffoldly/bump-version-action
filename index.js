@@ -15,6 +15,17 @@ const repoInfo = async () => {
     throw new Error("Unable to find remote with name 'origin'");
   }
 
+  const fetch = new URL(origin.refs.fetch);
+  const push = new URL(origin.refs.push);
+
+  fetch.username = core.getInput("repo-token");
+  push.username = fetch.username;
+
+  console.log("Setting Fetch URL", fetch.toString());
+  origin.refs.fetch = fetch.toString();
+  console.log("Setting Push URL", fetch.toString());
+  origin.refs.push = push.toString();
+
   const { pathname } = new URL(origin.refs.push);
   if (!pathname) {
     throw new Error(`Unable to extract pathname from ${origin.refs.push}`);
@@ -35,6 +46,17 @@ const repoInfo = async () => {
   console.log("Repo Info: ", JSON.stringify(info, null, 2));
 
   return info;
+};
+
+const commitMessagePrefix = (message) => {
+  const prefix = core.getInput("commit-message-prefix", {
+    required: false,
+  });
+  if (!prefix) {
+    return `🤖 ${message}`;
+  }
+
+  return `🤖 ${prefix} ${message}`;
 };
 
 const versionFetch = (versionFile) => {
@@ -62,7 +84,7 @@ const prerelease = async () => {
 
   console.log("New version:", newVersion.version);
 
-  const title = `CI: Prerelease: ${newVersion.version}`;
+  const title = commitMessagePrefix(`CI: Prerelease: ${newVersion.version}`);
 
   await simpleGit.default().add(".");
 
@@ -152,7 +174,7 @@ const postrelease = async (org, repo, sha) => {
 
   versionSet(versionFile, newVersion.version);
 
-  const title = `CI: Postrelease: ${newVersion.version}`;
+  const title = commitMessagePrefix(`CI: Postrelease: ${newVersion.version}`);
 
   const commit = await simpleGit.default().commit(title, versionFile);
   console.log(

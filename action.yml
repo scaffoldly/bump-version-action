@@ -6,7 +6,7 @@ branding:
 inputs:
   action:
     description: The release action ('prerelease' or 'postrelease')
-    requred: true
+    required: true
   version-file:
     description: "The file that maintains the version (e.g. package.json, sly.json)"
     required: true
@@ -15,6 +15,9 @@ inputs:
     required: true
   major-tag:
     description: "If set, will create/overwrite a tag representing the major release ('v1'). Only applicable during during postrelease"
+    required: false
+  commit-message-prefix:
+    description: "If set, this prefix will be added to any commit messages"
     required: false
   dnt:
     description: "If set, opt-out of usage analytics (https://docs.scaffold.ly/infrastructure/security/usage-analytics)"
