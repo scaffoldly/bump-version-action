@@ -95,7 +95,7 @@ const prerelease = async () => {
   const tag = await gitClient.addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
-  await gitClient.push(["--follow-tags"]);
+  await gitClient.push(["origin", "--follow-tags"]);
   await gitClient.pushTags();
   return { version: newVersion };
 };
@@ -180,7 +180,7 @@ const postrelease = async (org, repo, sha) => {
     JSON.stringify(commit)
   );
 
-  await gitClient.push();
+  await gitClient.push(["origin"]);
 
   versionSet(versionFile, newTagVersion.version);
 
