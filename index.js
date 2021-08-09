@@ -5,28 +5,26 @@ const fs = require("fs");
 const semver = require("semver");
 const axios = require("axios");
 
+const gitClient = simpleGit.default();
+
 const repoInfo = async () => {
-  const log = await simpleGit.default().log({ maxCount: 1 });
+  const log = await gitClient.log({ maxCount: 1 });
   const sha = log.latest.hash;
 
-  const remotes = await simpleGit.default().getRemotes(true);
+  const remotes = await gitClient.getRemotes(true);
   const origin = remotes.find((remote) => remote.name === "origin");
   if (!origin) {
     throw new Error("Unable to find remote with name 'origin'");
   }
 
-  const fetch = new URL(origin.refs.fetch);
   const push = new URL(origin.refs.push);
+  push.username = core.getInput("repo-token");
 
-  fetch.username = core.getInput("repo-token");
-  push.username = fetch.username;
+  console.log("Updating origin remote with repo-token");
+  await gitClient.removeRemote("origin");
+  await gitClient.addRemote("origin", push.toString());
 
-  console.log("Setting Fetch URL", fetch.toString());
-  origin.refs.fetch = fetch.toString();
-  console.log("Setting Push URL", fetch.toString());
-  origin.refs.push = push.toString();
-
-  const { pathname } = new URL(origin.refs.push);
+  const { pathname } = push;
   if (!pathname) {
     throw new Error(`Unable to extract pathname from ${origin.refs.push}`);
   }
@@ -86,19 +84,19 @@ const prerelease = async () => {
 
   const title = commitMessagePrefix(`CI: Prerelease: ${newVersion.version}`);
 
-  await simpleGit.default().add(".");
+  await gitClient.add(".");
 
-  const versionCommit = await simpleGit.default().commit(title);
+  const versionCommit = await gitClient.commit(title);
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(versionCommit)
   );
 
-  const tag = await simpleGit.default().addTag(newVersion.version);
+  const tag = await gitClient.addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
-  await simpleGit.default().push(["--follow-tags"]);
-  await simpleGit.default().pushTags();
+  await gitClient.push(["--follow-tags"]);
+  await gitClient.pushTags();
   return { version: newVersion };
 };
 
@@ -109,13 +107,13 @@ const postrelease = async (org, repo, sha) => {
 
   const octokit = github.getOctokit(repoToken);
 
-  await simpleGit.default().fetch();
-  await simpleGit.default().checkout(sha);
+  await gitClient.fetch();
+  await gitClient.checkout(sha);
   const tagVersion = versionFetch(versionFile);
   const newTagVersion = semver.parse(
     semver.inc(semver.parse(tagVersion.version), "patch")
   );
-  const tag = await simpleGit.default().addTag(newTagVersion.version);
+  const tag = await gitClient.addTag(newTagVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
   if (majorTag) {
@@ -123,7 +121,7 @@ const postrelease = async (org, repo, sha) => {
       console.log(
         `Major Tag Enabled: Attempting delete of existing tag v${newTagVersion.major}`
       );
-      await simpleGit.default().raw(["tag", "-d", `v${newTagVersion.major}`]);
+      await gitClient.raw(["tag", "-d", `v${newTagVersion.major}`]);
     } catch (e) {
       console.warn(
         `Error deleting existing tag v${newTagVersion.major}`,
@@ -136,9 +134,9 @@ const postrelease = async (org, repo, sha) => {
       .addTag(`v${newTagVersion.major}`);
     console.log(`Created new super tag: ${superTag.name}`);
 
-    await simpleGit.default().pushTags(["--force"]);
+    await gitClient.pushTags(["--force"]);
   } else {
-    await simpleGit.default().pushTags();
+    await gitClient.pushTags();
   }
 
   const release = await octokit.repos.getReleaseByTag({
@@ -162,7 +160,7 @@ const postrelease = async (org, repo, sha) => {
   const info = await octokit.repos.get({ owner: org, repo });
   const defaultBranch = info.data.default_branch;
 
-  await simpleGit.default().checkout(defaultBranch);
+  await gitClient.checkout(defaultBranch);
 
   const version = versionFetch(versionFile);
   console.log("Current version", version.version);
@@ -176,13 +174,13 @@ const postrelease = async (org, repo, sha) => {
 
   const title = commitMessagePrefix(`CI: Postrelease: ${newVersion.version}`);
 
-  const commit = await simpleGit.default().commit(title, versionFile);
+  const commit = await gitClient.commit(title, versionFile);
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(commit)
   );
 
-  await simpleGit.default().push();
+  await gitClient.push();
 
   versionSet(versionFile, newTagVersion.version);
 
@@ -216,7 +214,7 @@ const draftRelease = async (org, repo, version, sha) => {
   const repoToken = core.getInput("repo-token");
   const octokit = github.getOctokit(repoToken);
 
-  await simpleGit.default().fetch(["--unshallow"]);
+  await gitClient.fetch(["--unshallow"]);
 
   let fromTag;
   try {
@@ -227,7 +225,7 @@ const draftRelease = async (org, repo, version, sha) => {
     fromTag = latestRelease.data.tag_name;
   } catch (e) {
     console.warn("Unable to find latest release:", e.message);
-    fromTag = (await simpleGit.default().log()).all.slice(-1)[0].hash;
+    fromTag = (await gitClient.log()).all.slice(-1)[0].hash;
   }
 
   const { all: logs } = await simpleGit
@@ -310,7 +308,7 @@ const run = async () => {
 
   event(organization, repo, action);
 
-  await simpleGit.default().addConfig("user.name", "GitHub Action");
+  await gitClient.addConfig("user.name", "GitHub Action");
   await simpleGit
     .default()
     .addConfig("user.email", "github-action@users.noreply.github.com");
