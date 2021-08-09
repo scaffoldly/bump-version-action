@@ -80,7 +80,7 @@ const versionSet = (versionFile, version) => {
   fs.writeFileSync(versionFile, JSON.stringify(json, null, 2));
 };
 
-const prerelease = async () => {
+const prerelease = async (org, repo) => {
   const versionFile = core.getInput("version-file", { required: true });
   const version = versionFetch(versionFile);
 
@@ -341,7 +341,7 @@ const run = async () => {
 
   switch (action) {
     case "prerelease": {
-      const { version } = await prerelease();
+      const { version } = await prerelease(organization, repo);
       await draftRelease(organization, repo, version, sha);
       break;
     }
