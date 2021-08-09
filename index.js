@@ -17,18 +17,7 @@ const repoInfo = async () => {
     throw new Error("Unable to find remote with name 'origin'");
   }
 
-  console.log(
-    "!!!! TODO REMOVE THIS getRemotes(true) preupdate",
-    await gitClient.getRemotes(true)
-  );
-
-  const push = new URL(origin.refs.push);
-  push.username = core.getInput("repo-token");
-
-  console.log("Adding bva-origin");
-  await gitClient.addRemote("bva-origin", push.toString());
-
-  const { pathname } = push;
+  const { pathname } = new URL(origin.refs.push);
   if (!pathname) {
     throw new Error(`Unable to extract pathname from ${origin.refs.push}`);
   }
@@ -99,28 +88,8 @@ const prerelease = async (org, repo) => {
   const tag = await gitClient.addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
-  console.log(
-    "!!!! TODO REMOVE THIS getRemotes(true)",
-    await gitClient.getRemotes(true)
-  );
-
-  (await gitClient.getRemotes(true)).forEach((remote) => {
-    const url = new URL(remote.refs.push);
-    console.log("URL username substring", url.username.slice(-4));
-  });
-
-  const repoToken = core.getInput("repo-token");
-  const octokit = github.getOctokit(repoToken);
-  const info = await octokit.repos.get({ owner: org, repo });
-  const defaultBranch = info.data.default_branch;
-
-  await gitClient.push([
-    "--follow-tags",
-    "--set-upstream",
-    "bva-origin",
-    defaultBranch,
-  ]);
-  await gitClient.pushTags("bva-origin");
+  await gitClient.push(["--follow-tags"]);
+  await gitClient.pushTags();
   return { version: newVersion };
 };
 
