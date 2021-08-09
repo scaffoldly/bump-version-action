@@ -32,8 +32,8 @@ const repoInfo = async () => {
   const push = new URL(origin.refs.push);
   push.username = core.getInput("repo-token");
 
-  console.log("Updating origin remote with repo-token");
-  await gitClient.remote(["set-url", "origin", push.toString()]);
+  console.log("Adding bva-origin");
+  await gitClient.addRemote("bva-origin", push.toString());
 
   const { pathname } = push;
   if (!pathname) {
@@ -111,8 +111,18 @@ const prerelease = async () => {
     await gitClient.getRemotes(true)
   );
 
-  await gitClient.push(["--follow-tags"]);
-  await gitClient.pushTags();
+  const repoToken = core.getInput("repo-token");
+  const octokit = github.getOctokit(repoToken);
+  const info = await octokit.repos.get({ owner: org, repo });
+  const defaultBranch = info.data.default_branch;
+
+  await gitClient.push([
+    "--follow-tags",
+    "--set-upstream",
+    "bva-origin",
+    defaultBranch,
+  ]);
+  await gitClient.pushTags("bva-origin");
   return { version: newVersion };
 };
 
