@@ -21,8 +21,7 @@ const repoInfo = async () => {
   push.username = core.getInput("repo-token");
 
   console.log("Updating origin remote with repo-token");
-  await gitClient.removeRemote("origin");
-  await gitClient.addRemote("origin", push.toString());
+  await gitClient.remote(["set-url", "origin", push.toString()]);
 
   const { pathname } = push;
   if (!pathname) {
@@ -95,7 +94,7 @@ const prerelease = async () => {
   const tag = await gitClient.addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
-  await gitClient.push(["--set-upstream", "origin", "--follow-tags"]);
+  await gitClient.push(["--follow-tags"]);
   await gitClient.pushTags();
   return { version: newVersion };
 };
@@ -180,7 +179,7 @@ const postrelease = async (org, repo, sha) => {
     JSON.stringify(commit)
   );
 
-  await gitClient.push(["--set-upstream", "origin"]);
+  await gitClient.push();
 
   versionSet(versionFile, newTagVersion.version);
 
