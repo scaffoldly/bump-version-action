@@ -43,7 +43,7 @@ _Optional:_ If set, will create/overwrite a tag representing the major release (
 
 ## `commit-message-prefix`
 
-_Optional:_ If set, will create/overwrite a tag representing the major release ('v1'). Only applicable during during postrelease
+_Optional:_ If set, this prefix will be added to any commit messages
 
 # Outputs
 
