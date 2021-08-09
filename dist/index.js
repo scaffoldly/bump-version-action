@@ -101,6 +101,11 @@ const prerelease = async () => {
   const tag = await gitClient.addTag(newVersion.version);
   console.log(`Created new tag: ${tag.name}`);
 
+  console.log(
+    "!!!! TODO REMOVE THIS getRemotes(true)",
+    await gitClient.getRemotes(true)
+  );
+
   await gitClient.push(["--follow-tags"]);
   await gitClient.pushTags();
   return { version: newVersion };
