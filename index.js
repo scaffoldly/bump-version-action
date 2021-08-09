@@ -17,6 +17,11 @@ const repoInfo = async () => {
     throw new Error("Unable to find remote with name 'origin'");
   }
 
+  console.log(
+    "!!!! TODO REMOVE THIS getRemotes(true) preupdate",
+    await gitClient.getRemotes(true)
+  );
+
   const push = new URL(origin.refs.push);
   push.username = core.getInput("repo-token");
 
