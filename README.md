@@ -45,6 +45,10 @@ _Optional:_ If set, will create/overwrite a tag representing the major release (
 
 _Optional:_ If set, this prefix will be added to any commit messages
 
+## `release-branch`
+
+_Optional:_ If set, set the branch that version commits will be pushed to
+
 # Outputs
 
 This action has no outputs.

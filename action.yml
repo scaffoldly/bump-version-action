@@ -19,6 +19,9 @@ inputs:
   commit-message-prefix:
     description: "If set, this prefix will be added to any commit messages"
     required: false
+  release-branch:
+    description: "If set, set the branch that version commits will be pushed to"
+    required: false
   dnt:
     description: "If set, opt-out of usage analytics (https://docs.scaffold.ly/infrastructure/security/usage-analytics)"
     required: false

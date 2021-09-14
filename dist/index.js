@@ -158,7 +158,14 @@ const postrelease = async (org, repo, sha) => {
   );
 
   const info = await octokit.repos.get({ owner: org, repo });
-  const defaultBranch = info.data.default_branch;
+  let defaultBranch = info.data.default_branch;
+
+  const releaseBranch = core.getInput("release-branch", { required: false });
+  if (releaseBranch) {
+    defaultBranch = releaseBranch;
+  }
+
+  console.log("Using branch:", releaseBranch);
 
   await gitClient.checkout(defaultBranch);
 
