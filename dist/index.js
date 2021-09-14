@@ -139,33 +139,49 @@ const postrelease = async (org, repo, sha) => {
     await gitClient.pushTags();
   }
 
-  const release = await octokit.repos.getReleaseByTag({
-    owner: org,
-    repo,
-    tag: tagVersion.version,
-  });
+  const releaseBranch = core.getInput("release-branch", { required: false });
 
-  await octokit.repos.updateRelease({
-    owner: org,
-    repo,
-    release_id: release.data.id,
-    name: newTagVersion.version,
-    tag_name: newTagVersion.version,
-  });
+  if (releaseBranch) {
+    const release = await octokit.repos.createRelease({
+      owner: org,
+      repo,
+      name: newTagVersion.version,
+      tag_name: newTagVersion.version,
+      draft: false,
+      body: `
+# HOTFIX: \`${tagVersion.version}\` to \`${newTagVersion.version}\` (Beta Feature)
+`,
+    });
 
-  console.log(
-    `Updated release ${release.data.id} on tag ${tagVersion.version} to tag: ${newTagVersion.version}`
-  );
+    console.log(`Created release: ${release.data.name}: ${release.data.url}`);
+  } else {
+    const release = await octokit.repos.getReleaseByTag({
+      owner: org,
+      repo,
+      tag: tagVersion.version,
+    });
+
+    await octokit.repos.updateRelease({
+      owner: org,
+      repo,
+      release_id: release.data.id,
+      name: newTagVersion.version,
+      tag_name: newTagVersion.version,
+    });
+
+    console.log(
+      `Updated release ${release.data.id} on tag ${tagVersion.version} to tag: ${newTagVersion.version}`
+    );
+  }
 
   const info = await octokit.repos.get({ owner: org, repo });
   let defaultBranch = info.data.default_branch;
 
-  const releaseBranch = core.getInput("release-branch", { required: false });
   if (releaseBranch) {
     defaultBranch = releaseBranch;
   }
 
-  console.log("Using branch:", releaseBranch);
+  console.log("Updating version on branch:", releaseBranch);
 
   await gitClient.checkout(defaultBranch);
 
