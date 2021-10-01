@@ -278,7 +278,7 @@ const draftRelease = async (org, repo, version, sha) => {
 
   const { all: logs } = await simpleGit
     .default()
-    .log({ from: fromTag, to: sha, "first-parent": defaultBranch });
+    .log({ from: fromTag, to: sha, "--first-parent": defaultBranch });
 
   let body = createLogMessages(logs, org, repo, fromTag);
 

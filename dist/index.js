@@ -149,7 +149,7 @@ const postrelease = async (org, repo, sha) => {
       tag_name: newTagVersion.version,
       draft: false,
       body: `
-# HOTFIX: \`${tagVersion.version}\` to \`${newTagVersion.version}\` (Beta Feature)
+HOTFIX: \`${tagVersion.version}\` to \`${newTagVersion.version}\`
 `,
     });
 
@@ -217,7 +217,7 @@ const createLogMessages = (
   fromTag,
   options = { links: true, messages: true, authors: true }
 ) => {
-  return logs
+  let body = logs
     .map((log) => {
       return `
  - ${log.hash.slice(0, 7)}: ${
@@ -229,6 +229,35 @@ const createLogMessages = (
       }`;
     })
     .join("\n");
+
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping links...");
+    body = createLogMessages(logs, org, repo, fromTag, {
+      links: false,
+      authors: true,
+      messages: true,
+    });
+  }
+
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping messages...");
+    body = createLogMessages(logs, org, repo, fromTag, {
+      links: false,
+      authors: true,
+      messages: false,
+    });
+  }
+
+  if (body.length >= 20000) {
+    console.warn("Body is long. Skipping authors...");
+    body = createLogMessages(logs, org, repo, fromTag, {
+      links: false,
+      authors: false,
+      messages: false,
+    });
+  }
+
+  return body;
 };
 
 // TODO: Handle PR
@@ -251,38 +280,14 @@ const draftRelease = async (org, repo, version, sha) => {
     fromTag = (await gitClient.log()).all.slice(-1)[0].hash;
   }
 
+  const info = await octokit.repos.get({ owner: org, repo });
+  const defaultBranch = info.data.default_branch;
+
   const { all: logs } = await simpleGit
     .default()
-    .log({ from: fromTag, to: sha });
+    .log({ from: fromTag, to: sha, "--first-parent": defaultBranch });
 
-  let body = createLogMessages(logs);
-
-  if (body.length >= 20000) {
-    console.warn("Body is long. Skipping compare links from release body...");
-    body = createLogMessages(logs, org, repo, fromTag, {
-      links: false,
-      authors: true,
-      messages: true,
-    });
-  }
-
-  if (body.length >= 20000) {
-    console.warn("Body is long. Skipping log messages...");
-    body = createLogMessages(logs, org, repo, fromTag, {
-      links: false,
-      authors: true,
-      messages: false,
-    });
-  }
-
-  if (body.length >= 20000) {
-    console.warn("Body is long. Skipping log messages...");
-    body = createLogMessages(logs, org, repo, fromTag, {
-      links: false,
-      authors: false,
-      messages: false,
-    });
-  }
+  let body = createLogMessages(logs, org, repo, fromTag);
 
   const release = await octokit.repos.createRelease({
     owner: org,
