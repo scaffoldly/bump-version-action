@@ -273,8 +273,8 @@ const draftRelease = async (org, repo, version, sha) => {
     fromTag = (await gitClient.log()).all.slice(-1)[0].hash;
   }
 
-  const info = await octokit.repos.get({ owner: org, repo });
-  const defaultBranch = info.data.default_branch;
+  // const info = await octokit.repos.get({ owner: org, repo });
+  // const defaultBranch = info.data.default_branch;
 
   const { all: logs } = await simpleGit
     .default()
