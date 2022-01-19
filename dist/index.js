@@ -230,7 +230,12 @@ const createLogMessages = (
     })
     .join("\n");
 
-  if (body.length >= 20000 && links && authors && messages) {
+  if (
+    body.length >= 20000 &&
+    options.links &&
+    options.authors &&
+    options.messages
+  ) {
     console.warn("Body is long. Skipping links...");
     body = createLogMessages(logs, org, repo, fromTag, {
       links: false,
@@ -239,7 +244,12 @@ const createLogMessages = (
     });
   }
 
-  if (body.length >= 20000 && !links && authors && messages) {
+  if (
+    body.length >= 20000 &&
+    !options.links &&
+    options.authors &&
+    options.messages
+  ) {
     console.warn("Body is long. Skipping messages...");
     body = createLogMessages(logs, org, repo, fromTag, {
       links: false,
@@ -248,7 +258,12 @@ const createLogMessages = (
     });
   }
 
-  if (body.length >= 20000 && !links && authors && !messages) {
+  if (
+    body.length >= 20000 &&
+    !options.links &&
+    options.authors &&
+    !options.messages
+  ) {
     console.warn("Body is long. Skipping authors...");
     body = createLogMessages(logs, org, repo, fromTag, {
       links: false,
@@ -257,7 +272,12 @@ const createLogMessages = (
     });
   }
 
-  if (body.length >= 20000 && !links && !authors && !message) {
+  if (
+    body.length >= 20000 &&
+    !options.links &&
+    !options.authors &&
+    !options.message
+  ) {
     body = `Unable to summarize release`;
   }
 
