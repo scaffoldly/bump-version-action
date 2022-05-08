@@ -125,7 +125,7 @@ const postrelease = async (org, repo, sha) => {
         `Major Tag Enabled: Attempting delete of existing tag v${newTagVersion.major}`
       );
       const tags = await gitClient.tags();
-      console.log("Existing tags: ", tags.all());
+      console.log("Existing tags: ", tags.all);
       await gitClient.raw(["tag", "-d", `v${newTagVersion.major}`]);
     } catch (e) {
       console.warn(
