@@ -22,6 +22,9 @@ inputs:
   release-branch:
     description: "If set, set the branch that version commits will be pushed to"
     required: false
+  tag-prefix:
+    description: "Prefix the version tag with a string (e.g. 'v')"
+    required: false
   dnt:
     description: "If set, opt-out of usage analytics (https://docs.scaffold.ly/infrastructure/security/usage-analytics)"
     required: false
