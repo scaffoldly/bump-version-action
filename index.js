@@ -113,13 +113,14 @@ const postrelease = async (org, repo, sha) => {
   console.log(`Created new tag: ${tag.name}`);
 
   if (majorTag) {
+    const superTag = `v${newTagVersion.major}`;
     await gitClient.raw([
       "tag",
       "-f",
-      `v${newTagVersion.major}`,
+      superTag,
       `${tagPrefix}${newTagVersion.version}`,
     ]);
-    console.log(`Created new super tag: ${superTag.name}`);
+    console.log(`Created super tag: ${superTag}`);
 
     await gitClient.pushTags(["--force"]);
   } else {
