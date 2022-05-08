@@ -120,23 +120,12 @@ const postrelease = async (org, repo, sha) => {
   console.log(`Created new tag: ${tag.name}`);
 
   if (majorTag) {
-    try {
-      console.log(
-        `Major Tag Enabled: Attempting delete of existing tag v${newTagVersion.major}`
-      );
-      const tags = await gitClient.tags();
-      console.log("Existing tags: ", tags.all);
-      await gitClient.raw(["tag", "-d", `v${newTagVersion.major}`]);
-    } catch (e) {
-      console.warn(
-        `Error deleting existing tag v${newTagVersion.major}`,
-        e.message
-      );
-    }
-
-    const superTag = await simpleGit
-      .default()
-      .addTag(`v${newTagVersion.major}`);
+    await gitClient.raw([
+      "tag",
+      "-f",
+      `v${newTagVersion.major}`,
+      `${tagPrefix}${newTagVersion.version}`,
+    ]);
     console.log(`Created new super tag: ${superTag.name}`);
 
     await gitClient.pushTags(["--force"]);
