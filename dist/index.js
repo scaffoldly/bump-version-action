@@ -71,7 +71,7 @@ const versionSet = (versionFile, version) => {
 
 const prerelease = async (org, repo) => {
   const versionFile = core.getInput("version-file", { required: true });
-  const tagPrefix = core.getInput("tag-prefix", { required: falase }) || "";
+  const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
 
   const version = versionFetch(versionFile);
 
@@ -104,7 +104,7 @@ const prerelease = async (org, repo) => {
 
 const postrelease = async (org, repo, sha) => {
   const versionFile = core.getInput("version-file", { required: true });
-  const tagPrefix = core.getInput("tag-prefix", { required: falase }) || "";
+  const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
   const repoToken = core.getInput("repo-token");
   const majorTag = core.getInput("major-tag");
 
