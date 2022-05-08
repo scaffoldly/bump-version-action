@@ -71,6 +71,8 @@ const versionSet = (versionFile, version) => {
 
 const prerelease = async (org, repo) => {
   const versionFile = core.getInput("version-file", { required: true });
+  const tagPrefix = core.getInput("tag-prefix", { required: falase }) || "";
+
   const version = versionFetch(versionFile);
 
   console.log("Current version:", version.version);
@@ -92,7 +94,7 @@ const prerelease = async (org, repo) => {
     JSON.stringify(versionCommit)
   );
 
-  const tag = await gitClient.addTag(newVersion.version);
+  const tag = await gitClient.addTag(`${tagPrefix}${newVersion.version}`);
   console.log(`Created new tag: ${tag.name}`);
 
   await gitClient.push(["--follow-tags"]);
@@ -102,6 +104,7 @@ const prerelease = async (org, repo) => {
 
 const postrelease = async (org, repo, sha) => {
   const versionFile = core.getInput("version-file", { required: true });
+  const tagPrefix = core.getInput("tag-prefix", { required: falase }) || "";
   const repoToken = core.getInput("repo-token");
   const majorTag = core.getInput("major-tag");
 
@@ -113,7 +116,7 @@ const postrelease = async (org, repo, sha) => {
   const newTagVersion = semver.parse(
     semver.inc(semver.parse(tagVersion.version), "patch")
   );
-  const tag = await gitClient.addTag(newTagVersion.version);
+  const tag = await gitClient.addTag(`${tagPrefix}${newTagVersion.version}`);
   console.log(`Created new tag: ${tag.name}`);
 
   if (majorTag) {
