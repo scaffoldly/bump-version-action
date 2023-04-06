@@ -88,7 +88,9 @@ const prerelease = async (org, repo) => {
 
   await gitClient.add(".");
 
-  const versionCommit = await gitClient.commit(title);
+  const versionCommit = await gitClient.commit(title, undefined, {
+    "--no-verify": true,
+  });
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(versionCommit)
@@ -192,7 +194,9 @@ HOTFIX: \`${tagVersion.version}\` to \`${newTagVersion.version}\`
 
   const title = commitMessagePrefix(`CI: Postrelease: ${newVersion.version}`);
 
-  const commit = await gitClient.commit(title, versionFile);
+  const commit = await gitClient.commit(title, versionFile, {
+    "--no-verify": true,
+  });
   console.log(
     `Committed new version: ${newVersion.version}`,
     JSON.stringify(commit)
