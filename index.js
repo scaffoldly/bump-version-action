@@ -104,7 +104,6 @@ const postrelease = async (org, repo, sha) => {
   const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
   const repoToken = core.getInput("repo-token");
   const majorTag = core.getInput("major-tag");
-  const pushFlags = GITHUB_RUN_ATTEMPT !== 1 || majorTag ? ["--force"] : [];
 
   const octokit = github.getOctokit(repoToken);
 
@@ -115,12 +114,8 @@ const postrelease = async (org, repo, sha) => {
     semver.inc(semver.parse(tagVersion.version), "patch")
   );
 
-  if(GITHUB_RUN_ATTEMPT === 1) {
-    const tag = await gitClient.addTag(`${tagPrefix}${newTagVersion.version}`);
-    console.log(`Created new tag: ${tag.name}`);
-  } else {
-    console.log(`Skipping tag creation. This is another run attempt: ${GITHUB_RUN_ATTEMPT}`);
-  }
+  const tag = await gitClient.addTag(`${tagPrefix}${newTagVersion.version}`);
+  console.log(`Created new tag: ${tag.name}`);
 
   if (majorTag) {
     const superTag = `v${newTagVersion.major}`;
@@ -131,9 +126,10 @@ const postrelease = async (org, repo, sha) => {
       `${tagPrefix}${newTagVersion.version}`,
     ]);
     console.log(`Created super tag: ${superTag}`);
+    await gitClient.pushTags(["--force"]);
+  } else {
+    await gitClient.pushTags();
   }
-
-  await gitClient.pushTags(pushFlags);
 
   const releaseBranch = core.getInput("release-branch", { required: false });
 
@@ -382,6 +378,10 @@ const run = async () => {
 };
 
 (async () => {
+  if(GITHUB_RUN_ATTEMPT !== 1) {
+    console.log(`Skipping since this is run ${GITHUB_RUN_ATTEMPT}...`);
+    return;
+  }
   try {
     await run();
   } catch (e) {
