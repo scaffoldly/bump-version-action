@@ -13,7 +13,7 @@ const semver = __nccwpck_require__(1383);
 const axios = __nccwpck_require__(6545);
 
 const gitClient = simpleGit.default();
-const { GITHUB_RUN_ATTEMPT } = parseInt(process.env || "1");
+const GITHUB_RUN_ATTEMPT = parseInt(process.env.GITHUB_RUN_ATTEMPT || "1");
 
 const repoInfo = async () => {
   const log = await gitClient.log({ maxCount: 1 });
