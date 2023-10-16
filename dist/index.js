@@ -121,8 +121,13 @@ const postrelease = async (org, repo, sha) => {
   const newTagVersion = semver.parse(
     semver.inc(semver.parse(tagVersion.version), "patch")
   );
-  const tag = await gitClient.addTag(`${tagPrefix}${newTagVersion.version}`);
-  console.log(`Created new tag: ${tag.name}`);
+
+  if(GITHUB_RUN_ATTEMPT === 1) {
+    const tag = await gitClient.addTag(`${tagPrefix}${newTagVersion.version}`);
+    console.log(`Created new tag: ${tag.name}`);
+  } else {
+    console.log(`Skipping tag creation. This is another run attempt: ${GITHUB_RUN_ATTEMPT}`);
+  }
 
   if (majorTag) {
     const superTag = `v${newTagVersion.major}`;
