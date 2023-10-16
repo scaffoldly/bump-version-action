@@ -73,7 +73,7 @@ const versionSet = (versionFile, version) => {
 const prerelease = async (org, repo) => {
   const versionFile = core.getInput("version-file", { required: true });
   const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
-  const pushFlags = GITHUB_RUN_ATTEMPT === 1 ? [] : ["--force"];
+  const pushFlags = GITHUB_RUN_ATTEMPT !== 1 ? ["--force"] : [];
 
   const version = versionFetch(versionFile);
 
@@ -111,7 +111,7 @@ const postrelease = async (org, repo, sha) => {
   const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
   const repoToken = core.getInput("repo-token");
   const majorTag = core.getInput("major-tag");
-  const pushFlags = GITHUB_RUN_ATTEMPT === 1 || majorTag ? [] : ["--force"];
+  const pushFlags = GITHUB_RUN_ATTEMPT !== 1 || majorTag ? ["--force"] : [];
 
   const octokit = github.getOctokit(repoToken);
 
