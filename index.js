@@ -6,7 +6,7 @@ const semver = require("semver");
 const axios = require("axios");
 
 const gitClient = simpleGit.default();
-const { GITHUB_RUN_ATTEMPT } = parseInt(process.env || "1");
+const GITHUB_RUN_ATTEMPT = parseInt(process.env.GITHUB_RUN_ATTEMPT || "1");
 
 const repoInfo = async () => {
   const log = await gitClient.log({ maxCount: 1 });
