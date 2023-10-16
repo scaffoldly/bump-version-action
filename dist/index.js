@@ -13,6 +13,7 @@ const semver = __nccwpck_require__(1383);
 const axios = __nccwpck_require__(6545);
 
 const gitClient = simpleGit.default();
+const { GITHUB_RUN_ATTEMPT } = parseInt(process.env || "1");
 
 const repoInfo = async () => {
   const log = await gitClient.log({ maxCount: 1 });
@@ -72,6 +73,7 @@ const versionSet = (versionFile, version) => {
 const prerelease = async (org, repo) => {
   const versionFile = core.getInput("version-file", { required: true });
   const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
+  const pushFlags = GITHUB_RUN_ATTEMPT === 1 ? [] : ["--force"];
 
   const version = versionFetch(versionFile);
 
@@ -100,7 +102,7 @@ const prerelease = async (org, repo) => {
   console.log(`Created new tag: ${tag.name}`);
 
   await gitClient.push(["--follow-tags"]);
-  await gitClient.pushTags();
+  await gitClient.pushTags(pushFlags);
   return { version: newVersion };
 };
 
@@ -109,6 +111,7 @@ const postrelease = async (org, repo, sha) => {
   const tagPrefix = core.getInput("tag-prefix", { required: false }) || "";
   const repoToken = core.getInput("repo-token");
   const majorTag = core.getInput("major-tag");
+  const pushFlags = GITHUB_RUN_ATTEMPT === 1 || majorTag ? [] : ["--force"];
 
   const octokit = github.getOctokit(repoToken);
 
@@ -130,11 +133,9 @@ const postrelease = async (org, repo, sha) => {
       `${tagPrefix}${newTagVersion.version}`,
     ]);
     console.log(`Created super tag: ${superTag}`);
-
-    await gitClient.pushTags(["--force"]);
-  } else {
-    await gitClient.pushTags();
   }
+
+  await gitClient.pushTags(pushFlags);
 
   const releaseBranch = core.getInput("release-branch", { required: false });
 
