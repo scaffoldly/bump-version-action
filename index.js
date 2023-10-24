@@ -97,7 +97,7 @@ const prerelease = async (org, repo) => {
   console.log(`Created new tag: ${tag.name}`);
 
   await gitClient.push(["--follow-tags"]);
-  await gitClient.pushTags(pushFlags);
+  await gitClient.pushTags(pushFlags, { "--force": true });
   return { version: newVersion };
 };
 
@@ -380,7 +380,7 @@ const run = async () => {
 };
 
 (async () => {
-  if(GITHUB_RUN_ATTEMPT !== 1) {
+  if (GITHUB_RUN_ATTEMPT !== 1) {
     console.log(`Skipping since this is run ${GITHUB_RUN_ATTEMPT}...`);
     return;
   }
