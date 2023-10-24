@@ -84,10 +84,12 @@ const prerelease = async (org, repo) => {
   await gitClient.add(".");
 
   const versionCommit = await gitClient.commit(title, undefined, {
+    "--no-edit": true,
     "--no-verify": true,
+    "--amend": true,
   });
   console.log(
-    `Committed new version: ${newVersion.version}`,
+    `Committed version: ${newVersion.version}`,
     JSON.stringify(versionCommit)
   );
 
